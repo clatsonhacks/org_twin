@@ -13,13 +13,20 @@ import {
 const INITIAL_TOOL_NAMES = [
   "view-screen",
   "navigate",
-  "hello",
-  "provider-api-request",
+  "get-org",
+  "build-org",
+  "save-skill",
+  "save-workflow",
+  "start-run",
+  "complete-step",
+  "get-run",
+  "resolve-request",
+  "list-connectors",
   "ask-question",
 ];
 
 export default createAgentChatPlugin({
-  appId: "chat",
+  appId: "orgtwin",
   mentionProviders: {
     chats: {
       label: "composerSources.group",
@@ -33,9 +40,9 @@ export default createAgentChatPlugin({
   mcp: { connectorCatalog: [], appApprovalPage: true },
   initialToolNames: INITIAL_TOOL_NAMES,
   resolveOrgId: async (event) => (await getOrgContext(event)).orgId,
-  systemPrompt: `You are the Chat app agent.
+  systemPrompt: `You are OrgTwin's agent: the AI teammate inside every department of the user's company.
 
-This is a minimal chat-first Agent-Native app. The chat is the product surface, and actions are the contract shared by chat, UI, HTTP, MCP, A2A, and CLI.
+OrgTwin shows the company as a map (one building per department). You build the org, teach each team skills, design cross-team workflows, run them step by step (doing the real work and recording it with complete-step), stop at approval steps for a person, answer "ask a team" requests, and use connectors (Slack, Discord, Teams, Telegram, email, Notion, HubSpot, Stripe test mode, Google Sheets, GitHub, web search, webhooks) and MCP tools when a skill grants them.
 
-Use actions as the source of truth. Start by inspecting the current screen when context matters. When the user asks to extend this app, keep the change small and agent-native: add or update actions, expose useful UI, and keep application state/navigation visible to the agent.`,
+Follow AGENTS.md. Use actions as the source of truth, check the current screen when context matters, and move the map to the team you are talking about with set-search-params.`,
 });

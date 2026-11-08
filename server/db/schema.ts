@@ -37,6 +37,7 @@ export const skills = table("ot_skills", {
   stepsJson: text("steps_json").notNull().default("[]"),
   minutesSaved: integer("minutes_saved").notNull().default(0),
   timesUsed: integer("times_used").notNull().default(0),
+  toolsJson: text("tools_json").notNull().default("[]"),
   ...owned,
 });
 
@@ -71,5 +72,19 @@ export const requests = table("ot_requests", {
   departmentId: text("department_id").notNull().default(""),
   skillId: text("skill_id").notNull().default(""),
   result: text("result").notNull().default(""),
+  ...owned,
+});
+
+/** A2A-style task messages: handoffs between department agents, and calls to outside A2A agents. */
+export const messages = table("ot_messages", {
+  id: text("id").primaryKey(),
+  runId: text("run_id").notNull().default(""),
+  fromDepartmentId: text("from_department_id").notNull().default(""),
+  toDepartmentId: text("to_department_id").notNull().default(""),
+  toAgentUrl: text("to_agent_url").notNull().default(""),
+  kind: text("kind").notNull().default("task"),
+  text: text("text").notNull().default(""),
+  dataJson: text("data_json").notNull().default("{}"),
+  reply: text("reply").notNull().default(""),
   ...owned,
 });

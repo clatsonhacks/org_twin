@@ -70,6 +70,24 @@ CREATE TABLE IF NOT EXISTS ot_requests (
 );
 CREATE INDEX IF NOT EXISTS idx_ot_requests_owner ON ot_requests (owner_email, created_at)`,
     },
+    {
+      version: 2,
+      name: "orgtwin-skill-tools-and-a2a",
+      sql: `ALTER TABLE ot_skills ADD COLUMN tools_json TEXT NOT NULL DEFAULT '[]';
+CREATE TABLE IF NOT EXISTS ot_messages (
+  id TEXT PRIMARY KEY,
+  run_id TEXT NOT NULL DEFAULT '',
+  from_department_id TEXT NOT NULL DEFAULT '',
+  to_department_id TEXT NOT NULL DEFAULT '',
+  to_agent_url TEXT NOT NULL DEFAULT '',
+  kind TEXT NOT NULL DEFAULT 'task',
+  text TEXT NOT NULL DEFAULT '',
+  data_json TEXT NOT NULL DEFAULT '{}',
+  reply TEXT NOT NULL DEFAULT '',
+  ${owned}
+);
+CREATE INDEX IF NOT EXISTS idx_ot_messages_owner ON ot_messages (owner_email, created_at)`,
+    },
   ],
   { table: "orgtwin_migrations" },
 );

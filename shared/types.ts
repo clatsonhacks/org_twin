@@ -51,6 +51,22 @@ export interface Skill {
   steps: SkillStep[];
   minutesSaved: number;
   timesUsed: number;
+  /** Connector / MCP tools this skill may use, e.g. ["slack", "web", "mcp:helpdesk"]. Empty = no outside tools. */
+  tools: string[];
+}
+
+/** An A2A-style task message between department agents, or to an outside A2A agent. */
+export interface AgentMessage {
+  id: string;
+  runId: string;
+  fromDepartmentId: string;
+  toDepartmentId: string;
+  toAgentUrl: string;
+  kind: "task" | "external";
+  text: string;
+  data: Record<string, unknown>;
+  reply: string;
+  createdAt: string;
 }
 
 export interface Workflow {
@@ -96,6 +112,7 @@ export interface OrgSnapshot {
   workflows: Workflow[];
   runs: Run[];
   requests: TeamRequest[];
+  messages: AgentMessage[];
   stats: {
     hoursAutomatable: number;
     hoursSaved: number;

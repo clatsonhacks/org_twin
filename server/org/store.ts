@@ -2,6 +2,7 @@ import { and, asc, desc, eq } from "drizzle-orm";
 
 import {
   DEPARTMENT_COLORS,
+  type AgentMessage,
   type Company,
   type Department,
   type OrgSnapshot,
@@ -18,6 +19,7 @@ import { getDb } from "../db/index.js";
 import {
   companies,
   departments,
+  messages,
   requests,
   runs,
   skills,
@@ -74,6 +76,22 @@ function toSkill(r: typeof skills.$inferSelect): Skill {
     steps: parse<SkillStep[]>(r.stepsJson, []),
     minutesSaved: r.minutesSaved,
     timesUsed: r.timesUsed,
+    tools: parse<string[]>(r.toolsJson, []),
+  };
+}
+
+function toMessage(r: typeof messages.$inferSelect): AgentMessage {
+  return {
+    id: r.id,
+    runId: r.runId,
+    fromDepartmentId: r.fromDepartmentId,
+    toDepartmentId: r.toDepartmentId,
+    toAgentUrl: r.toAgentUrl,
+    kind: r.kind as AgentMessage["kind"],
+    text: r.text,
+    data: parse<Record<string, unknown>>(r.dataJson, {}),
+    reply: r.reply,
+    createdAt: r.createdAt,
   };
 }
 
@@ -118,7 +136,7 @@ function toRequest(r: typeof requests.$inferSelect): TeamRequest {
 
 export async function getSnapshot(owner: string): Promise<OrgSnapshot> {
   const db = getDb();
-  const [co, deps, sks, wfs, rns, reqs] = await Promise.all([
+  const [co, deps, sks, wfs, rns, reqs, msgs] = await Promise.all([
     db.select().from(companies).where(eq(companies.ownerEmail, owner)),
     db
       .select()
@@ -129,6 +147,7 @@ export async function getSnapshot(owner: string): Promise<OrgSnapshot> {
     db.select().from(workflows).where(eq(workflows.ownerEmail, owner)).orderBy(asc(workflows.createdAt)),
     db.select().from(runs).where(eq(runs.ownerEmail, owner)).orderBy(desc(runs.createdAt)).limit(20),
     db.select().from(requests).where(eq(requests.ownerEmail, owner)).orderBy(desc(requests.createdAt)).limit(30),
+    db.select().from(messages).where(eq(messages.ownerEmail, owner)).orderBy(desc(messages.createdAt)).limit(40),
   ]);
   const departmentList = deps.map(toDepartment);
   const runList = rns.map(toRun);
@@ -145,6 +164,7 @@ export async function getSnapshot(owner: string): Promise<OrgSnapshot> {
     workflows: wfs.map(toWorkflow),
     runs: runList,
     requests: requestList,
+    messages: msgs.map(toMessage),
     stats: {
       hoursAutomatable: departmentList.reduce((a, d) => a + d.hoursAutomatable, 0),
       hoursSaved: Math.round(((minutes + requestMinutes) / 60) * 10) / 10,
@@ -232,7 +252,7 @@ export async function deleteDepartment(owner: string, id: string) {
 /** Replace the whole org (company + departments). Skills, workflows, runs and requests are cleared. */
 export async function resetOrg(owner: string) {
   const db = getDb();
-  for (const t of [requests, runs, workflows, skills, departments, companies]) {
+  for (const t of [messages, requests, runs, workflows, skills, departments, companies]) {
     await db.delete(t).where(eq(t.ownerEmail, owner));
   }
 }
@@ -271,6 +291,7 @@ export interface SkillInput {
   description?: string | undefined;
   steps?: SkillStep[] | undefined;
   minutesSaved?: number | undefined;
+  tools?: string[] | undefined;
 }
 
 export async function upsertSkill(owner: string, input: SkillInput): Promise<Skill> {
@@ -286,6 +307,7 @@ export async function upsertSkill(owner: string, input: SkillInput): Promise<Ski
       if (input.description !== undefined) patch.description = input.description;
       if (input.steps !== undefined) patch.stepsJson = JSON.stringify(input.steps);
       if (input.minutesSaved !== undefined) patch.minutesSaved = input.minutesSaved;
+      if (input.tools !== undefined) patch.toolsJson = JSON.stringify(input.tools);
       await db.update(skills).set(patch).where(eq(skills.id, row.id));
       const [updated] = await db.select().from(skills).where(eq(skills.id, row.id));
       return toSkill(updated!);
@@ -299,6 +321,7 @@ export async function upsertSkill(owner: string, input: SkillInput): Promise<Ski
     description: input.description || "",
     stepsJson: JSON.stringify(input.steps ?? []),
     minutesSaved: input.minutesSaved ?? 0,
+    toolsJson: JSON.stringify(input.tools ?? []),
     ownerEmail: owner,
   });
   const [row] = await db.select().from(skills).where(eq(skills.id, id));
@@ -486,7 +509,66 @@ export async function completeStep(
   step.finishedAt = nowIso();
   advance(run, stepIndex);
   await saveRun(run);
+  await recordHandoffIfNeeded(owner, run, stepIndex);
   return run;
+}
+
+/** When the next step belongs to another department, send it an A2A task with this step's output. */
+async function recordHandoffIfNeeded(owner: string, run: Run, fromIndex: number) {
+  const from = run.steps[fromIndex];
+  // Skip approval steps: the hand-off goes from the last step that produced work.
+  let toIndex = fromIndex + 1;
+  while (run.steps[toIndex]?.kind === "approval") toIndex++;
+  const to = run.steps[toIndex];
+  if (!from || !to || from.kind === "approval" || from.departmentId === to.departmentId) return;
+  await addMessage(owner, {
+    runId: run.id,
+    fromDepartmentId: from.departmentId,
+    toDepartmentId: to.departmentId,
+    kind: "task",
+    text: `${to.title}: ${to.instructions}`.slice(0, 2000),
+    data: { run: run.name, fromStep: from.title, output: from.output.slice(0, 4000) },
+  });
+}
+
+/* ---------------- A2A messages ---------------- */
+
+export async function addMessage(
+  owner: string,
+  input: {
+    runId?: string | undefined;
+    fromDepartmentId?: string | undefined;
+    toDepartmentId?: string | undefined;
+    toAgentUrl?: string | undefined;
+    kind: AgentMessage["kind"];
+    text: string;
+    data?: Record<string, unknown> | undefined;
+    reply?: string | undefined;
+  },
+): Promise<AgentMessage> {
+  const id = slugId(input.kind, "msg");
+  await getDb().insert(messages).values({
+    id,
+    runId: input.runId ?? "",
+    fromDepartmentId: input.fromDepartmentId ?? "",
+    toDepartmentId: input.toDepartmentId ?? "",
+    toAgentUrl: input.toAgentUrl ?? "",
+    kind: input.kind,
+    text: input.text,
+    dataJson: JSON.stringify(input.data ?? {}),
+    reply: input.reply ?? "",
+    ownerEmail: owner,
+  });
+  const [row] = await getDb().select().from(messages).where(eq(messages.id, id));
+  return toMessage(row!);
+}
+
+export async function getSkill(owner: string, id: string): Promise<Skill | null> {
+  const [row] = await getDb()
+    .select()
+    .from(skills)
+    .where(and(eq(skills.id, id), eq(skills.ownerEmail, owner)));
+  return row ? toSkill(row) : null;
 }
 
 export async function decideApproval(
