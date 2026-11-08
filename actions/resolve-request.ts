@@ -2,6 +2,7 @@ import { defineAction } from "@agent-native/core/action";
 import { z } from "zod";
 
 import { updateRequest } from "../server/org/store.js";
+import { mapLink } from "./lib/links.js";
 import { owner } from "./lib/owner.js";
 
 export default defineAction({
@@ -14,5 +15,9 @@ export default defineAction({
     skillId: z.string().optional(),
     result: z.string().optional(),
   }),
+  link: ({ result }) => {
+    const r = result as { text?: string } | undefined;
+    return r?.text ? mapLink({ panel: "requests", label: `Request: ${r.text.slice(0, 40)}` }) : null;
+  },
   run: async ({ id, ...patch }, ctx) => updateRequest(owner(ctx), id, patch),
 });

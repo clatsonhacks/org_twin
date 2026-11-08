@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { getSnapshot, resetOrg, setCompany, upsertDepartment } from "../server/org/store.js";
 import { syncTeamAgents } from "../server/org/team-agents.js";
+import { mapLink } from "./lib/links.js";
 import { owner } from "./lib/owner.js";
 
 const role = z.object({ title: z.string(), count: z.number().int().min(1).default(1) });
@@ -30,6 +31,7 @@ export default defineAction({
       .max(12),
     replace: z.boolean().default(true),
   }),
+  link: () => mapLink({ label: "Open the company map" }),
   run: async (args, ctx) => {
     const me = owner(ctx);
     const before = args.replace ? (await getSnapshot(me)).departments.map((d) => d.id) : [];

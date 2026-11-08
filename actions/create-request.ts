@@ -2,6 +2,7 @@ import { defineAction } from "@agent-native/core/action";
 import { z } from "zod";
 
 import { createRequest } from "../server/org/store.js";
+import { mapLink } from "./lib/links.js";
 import { owner } from "./lib/owner.js";
 
 export default defineAction({
@@ -12,5 +13,9 @@ export default defineAction({
     fromDepartmentId: z.string().optional().describe("The asker's department id or name"),
     text: z.string().min(1),
   }),
+  link: ({ result }) => {
+    const r = result as { text?: string } | undefined;
+    return r?.text ? mapLink({ panel: "requests", label: `Request: ${r.text.slice(0, 40)}` }) : null;
+  },
   run: async (args, ctx) => createRequest(owner(ctx), args),
 });

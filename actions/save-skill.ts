@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { upsertSkill } from "../server/org/store.js";
 import { syncTeamAgents } from "../server/org/team-agents.js";
+import { mapLink } from "./lib/links.js";
 import { owner } from "./lib/owner.js";
 
 export default defineAction({
@@ -22,6 +23,10 @@ export default defineAction({
         "Outside tools this skill may use: slack, discord, teams, telegram, email, notion, hubspot, stripe, sheets, github, web, webhook, or mcp:<server name> for a connected MCP server. Only grant what the steps need.",
       ),
   }),
+  link: ({ result }) => {
+    const s = result as { departmentId?: string; name?: string } | undefined;
+    return s?.departmentId ? mapLink({ dept: s.departmentId, label: `Skill: ${s.name}` }) : null;
+  },
   run: async (args, ctx) => {
     const me = owner(ctx);
     const saved = await upsertSkill(me, args);

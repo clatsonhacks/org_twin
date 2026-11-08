@@ -2,6 +2,7 @@ import { defineAction } from "@agent-native/core/action";
 import { z } from "zod";
 
 import { upsertWorkflow } from "../server/org/store.js";
+import { mapLink } from "./lib/links.js";
 import { owner } from "./lib/owner.js";
 
 export default defineAction({
@@ -24,5 +25,9 @@ export default defineAction({
       .min(1)
       .max(20),
   }),
+  link: ({ result }) => {
+    const w = result as { name?: string } | undefined;
+    return w?.name ? mapLink({ panel: "workflows", label: `Workflow: ${w.name}` }) : null;
+  },
   run: async (args, ctx) => upsertWorkflow(owner(ctx), args),
 });

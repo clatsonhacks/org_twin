@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { upsertDepartment } from "../server/org/store.js";
 import { syncTeamAgents } from "../server/org/team-agents.js";
+import { mapLink } from "./lib/links.js";
 import { owner } from "./lib/owner.js";
 
 export default defineAction({
@@ -18,6 +19,10 @@ export default defineAction({
     hoursAutomatable: z.number().int().min(0).max(2000).optional(),
     roles: z.array(z.object({ title: z.string(), count: z.number().int().min(1) })).optional(),
   }),
+  link: ({ result }) => {
+    const d = result as { id?: string; name?: string } | undefined;
+    return d?.id ? mapLink({ dept: d.id, label: `${d.name} on the map` }) : null;
+  },
   run: async (args, ctx) => {
     const me = owner(ctx);
     const saved = await upsertDepartment(me, args);

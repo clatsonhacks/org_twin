@@ -22,6 +22,7 @@ import {
 import type { LinksFunction } from "react-router";
 
 import { Layout as AppLayout } from "@/components/layout/Layout";
+import "@/components/orgtwin/chat-renderers";
 import { AppToolkitProvider } from "@/components/ui/toolkit-provider";
 import { useNavigationState } from "@/hooks/use-navigation-state";
 import { APP_TITLE } from "@/lib/app-config";
@@ -94,9 +95,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
 function DbSyncSetup() {
   const qc = useQueryClient();
   useNavigationState();
+  const { pathname } = useLocation();
   useDbSync({
     queryClient: qc,
     ignoreSource: TAB_ID,
+    // The map changes without this user acting: teammates approve steps, the weekly job runs, requests arrive.
+    ...(pathname.startsWith("/home")
+      ? { realtime: { reason: "teammates and scheduled jobs change the company map while it is open" } }
+      : {}),
+    pauseWhenHidden: true,
   });
   return null;
 }
