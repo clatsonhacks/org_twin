@@ -1,5 +1,6 @@
 import { registerRequiredSecret } from "@agent-native/core/secrets";
 import { resolveSecretDetailed } from "@agent-native/core/server";
+import { HTTPError } from "h3";
 
 import { getSkill } from "../org/store.js";
 
@@ -178,9 +179,10 @@ export async function secret(key: string): Promise<string> {
 export async function requireSecret(key: string, connector: string): Promise<string> {
   const v = await secret(key);
   if (!v) {
-    throw new Error(
-      `${connector} is not connected: ${key} is missing. Ask the user to add it in Settings (or as an environment variable).`,
-    );
+    throw new HTTPError({
+      status: 409,
+      message: `${connector} is not connected: ${key} is missing. Ask the user to add it in Settings (or as an environment variable).`,
+    });
   }
   return v;
 }
@@ -212,11 +214,12 @@ export async function connectorStatus() {
 export async function requireGrant(owner: string, skillId: string | undefined, tool: string) {
   if (!skillId) return;
   const skill = await getSkill(owner, skillId);
-  if (!skill) throw new Error(`Skill ${skillId} not found.`);
+  if (!skill) throw new HTTPError({ status: 404, message: `Skill ${skillId} not found.` });
   if (!skill.tools.includes(tool)) {
-    throw new Error(
-      `The skill "${skill.name}" is not allowed to use ${tool}. Its tools: ${skill.tools.join(", ") || "none"}. Ask someone in its department to grant it.`,
-    );
+    throw new HTTPError({
+      status: 403,
+      message: `The skill "${skill.name}" is not allowed to use ${tool}. Its tools: ${skill.tools.join(", ") || "none"}. Ask someone in its department to grant it.`,
+    });
   }
 }
 
