@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { completeStep } from "../server/org/store.js";
 import { nextHint } from "./lib/next.js";
+import { mapLink } from "./lib/links.js";
 import { owner } from "./lib/owner.js";
 
 export default defineAction({
@@ -14,6 +15,19 @@ export default defineAction({
     output: z.string().min(1).describe("Markdown work product of this step"),
     minutesSaved: z.number().int().min(0).max(600).describe("Honest estimate of the minutes a person would have spent"),
   }),
+  // Show the run card in chat when the run needs a person or has finished; other steps stay compact.
+  chatUI: {
+    renderer: "orgtwin.run-card",
+    title: "Workflow run",
+    when: (_args, result) => {
+      const status = (result as { status?: string } | undefined)?.status;
+      return status === "waiting_approval" || status === "done";
+    },
+  },
+  link: ({ result }) => {
+    const run = (result as { run?: { name?: string } } | undefined)?.run;
+    return run ? mapLink({ panel: "runs", label: `Run: ${run.name}` }) : null;
+  },
   run: async ({ runId, stepIndex, output, minutesSaved }, ctx) => {
     let run;
     try {
@@ -24,6 +38,7 @@ export default defineAction({
     }
     return {
       ok: true as const,
+      run,
       runId: run.id,
       status: run.status,
       currentStep: run.currentStep,
