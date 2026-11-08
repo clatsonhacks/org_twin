@@ -3,18 +3,18 @@ export const TH = 64;
 
 /** Grid slots around the HQ plaza at (0,0), nearest first. */
 export const SLOTS: Array<[number, number]> = [
-  [-2, 0],
-  [0, -2],
-  [2, 0],
-  [0, 2],
-  [-2, -2],
-  [2, 2],
-  [2, -2],
-  [-2, 2],
-  [-4, 0],
-  [0, -4],
-  [4, 0],
-  [0, 4],
+  [-3, 0],
+  [0, -3],
+  [3, 0],
+  [0, 3],
+  [-3, -3],
+  [3, 3],
+  [3, -3],
+  [-3, 3],
+  [-6, 0],
+  [0, -6],
+  [6, 0],
+  [0, 6],
 ];
 
 export function iso(gx: number, gy: number): { x: number; y: number } {

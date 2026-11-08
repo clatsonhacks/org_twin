@@ -15,8 +15,15 @@ export default defineAction({
     minutesSaved: z.number().int().min(0).max(600).describe("Honest estimate of the minutes a person would have spent"),
   }),
   run: async ({ runId, stepIndex, output, minutesSaved }, ctx) => {
-    const run = await completeStep(owner(ctx), runId, stepIndex, output, minutesSaved);
+    let run;
+    try {
+      run = await completeStep(owner(ctx), runId, stepIndex, output, minutesSaved);
+    } catch (error) {
+      // Give the agent the reason (e.g. "waiting for approval") instead of a bare failure.
+      return { ok: false as const, error: error instanceof Error ? error.message : String(error) };
+    }
     return {
+      ok: true as const,
       runId: run.id,
       status: run.status,
       currentStep: run.currentStep,

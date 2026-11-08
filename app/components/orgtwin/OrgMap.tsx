@@ -80,10 +80,12 @@ export function OrgMap({ org, selectedId, onSelect }: OrgMapProps) {
           <stop offset="0%" stopColor="var(--ot-sea-1)" />
           <stop offset="100%" stopColor="var(--ot-sea-2)" />
         </radialGradient>
-        <linearGradient id="ot-beam" x1="0" x2="0" y1="1" y2="0">
-          <stop offset="0%" stopColor="currentColor" stopOpacity="0.55" />
-          <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
-        </linearGradient>
+        {placed.map((p) => (
+          <linearGradient key={p.dept.id} id={`ot-beam-${p.dept.id}`} x1="0" x2="0" y1="1" y2="0">
+            <stop offset="0%" stopColor={p.dept.color} stopOpacity="0.75" />
+            <stop offset="100%" stopColor={p.dept.color} stopOpacity="0" />
+          </linearGradient>
+        ))}
       </defs>
 
       {/* island */}
@@ -151,7 +153,41 @@ export function OrgMap({ org, selectedId, onSelect }: OrgMapProps) {
           onSelect={onSelect}
         />
       ))}
+
+      {/* labels on top so front buildings never hide them */}
+      {drawOrder.map((p) => (
+        <Label key={`label-${p.dept.id}`} p={p} selected={selectedId === p.dept.id} onSelect={onSelect} />
+      ))}
     </svg>
+  );
+}
+
+function Label({ p, selected, onSelect }: { p: Placed; selected: boolean; onSelect: (id: string) => void }) {
+  const b = TH * 0.3;
+  const { x, y, dept } = p;
+  return (
+    <g
+      className="cursor-pointer"
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelect(dept.id);
+      }}
+    >
+      <rect
+        x={x - 62}
+        y={y + b + 20}
+        width={124}
+        height={34}
+        rx={8}
+        className={selected ? "fill-background stroke-foreground" : "fill-background/90 stroke-border"}
+      />
+      <text x={x} y={y + b + 34} textAnchor="middle" className="fill-foreground text-[12px] font-semibold">
+        {dept.name}
+      </text>
+      <text x={x} y={y + b + 48} textAnchor="middle" className="fill-muted-foreground text-[10px]">
+        {dept.headcount} people · {dept.hoursAutomatable}h/wk AI
+      </text>
+    </g>
   );
 }
 
@@ -197,9 +233,7 @@ function Building({
         strokeWidth={3}
       />
       {/* beacon: hours AI could save */}
-      <g style={{ color: c }}>
-        <rect x={x - 5} y={y - h - b - beam} width={10} height={beam} fill="url(#ot-beam)" />
-      </g>
+      <rect x={x - 6} y={y - h - b - beam} width={12} height={beam} fill={`url(#ot-beam-${dept.id})`} />
       {/* left face */}
       <polygon
         points={`${x - a},${y} ${x},${y + b} ${x},${y + b - h} ${x - a},${y - h}`}
@@ -246,24 +280,6 @@ function Building({
           </g>
         );
       })}
-
-      {/* label */}
-      <g>
-        <rect
-          x={x - 62}
-          y={y + b + 20}
-          width={124}
-          height={34}
-          rx={8}
-          className="fill-background/90 stroke-border"
-        />
-        <text x={x} y={y + b + 34} textAnchor="middle" className="fill-foreground text-[12px] font-semibold">
-          {dept.name}
-        </text>
-        <text x={x} y={y + b + 48} textAnchor="middle" className="fill-muted-foreground text-[10px]">
-          {dept.headcount} people · {dept.hoursAutomatable}h/wk AI
-        </text>
-      </g>
 
       {/* status bubbles */}
       {(waiting || active || hasRequest) && (

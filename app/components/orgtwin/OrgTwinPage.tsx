@@ -1,5 +1,6 @@
 import { useActionMutation, useActionQuery } from "@agent-native/core/client/hooks";
 import { useSetPageTitle } from "@agent-native/toolkit/app-shell";
+import { AgentToggleButton } from "@agent-native/toolkit/app/chat";
 import { Textarea } from "@agent-native/toolkit/ui/textarea";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
@@ -92,6 +93,7 @@ function Hud({ org, onTab }: { org: OrgSnapshot; onTab: (t: PanelTab) => void })
         <Button size="sm" variant="outline" onClick={() => onTab("workflows")}>
           🔀 Workflows
         </Button>
+        <AgentToggleButton />
       </div>
     </div>
   );
