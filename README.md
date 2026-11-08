@@ -17,7 +17,17 @@ off that team. Then you and the agent work on the same map:
 - **Stay in control.** At an approval step the run stops and the building shows a "!". Only a person can
   approve: the approval action is hidden from the agent. After you approve, the agent carries on.
 - **Ask a team.** Anyone can ask for work in plain language ("I need an analysis of Q3 churn"). The agent
-  routes it to the team and skill that fit, does it, and logs the answer.
+  routes it to the team and skill that fit, does it, logs the answer and can ping the team on Slack/Discord.
+- **🎬 Skill Recorder: show it once.** Record your screen while talking through a task (or upload a video).
+  Keyframes are picked in the browser only when the screen changes, a **Vultr vision model** describes them,
+  and the agent turns that plus your narration into a skill you can edit. The video never leaves the browser.
+- **🔌 Connectors with per-skill grants.** Slack, Discord, Microsoft Teams, Telegram, email (SMTP), Notion,
+  HubSpot, Stripe (test mode), Google Sheets, GitHub (PR reviews, issues), web search + page reading, and
+  webhooks. Each skill lists the tools it may use; every send waits for a person's approval.
+- **🧩 MCP both ways.** Add any remote MCP server (Gmail, Linear, Jira, Zapier…) from the chat's + menu and
+  grant it to a skill as `mcp:<name>`. And every OrgTwin action is itself an MCP tool at `/mcp`.
+- **🤝 A2A.** Each team's agent hands work to the next as an A2A task, visible in every run. OrgTwin publishes
+  an agent card at `/.well-known/agent-card.json`, and its agent can message outside A2A agents.
 
 Built with [Agent-Native](https://agent-native.com) for the Builder.io Agent-Native Hackathon. AI runs on
 **Vultr Serverless Inference**.
@@ -27,7 +37,10 @@ Built with [Agent-Native](https://agent-native.com) for the Builder.io Agent-Nat
 | Piece | In OrgTwin |
 |---|---|
 | **Actions** (`actions/*.ts`, `defineAction`) | Every capability is defined once: `build-org`, `save-skill`, `save-workflow`, `start-run`, `complete-step`, `create-request`, `resolve-request`, … The map UI calls them with `useActionQuery` / `useActionMutation`; the agent calls the same ones as tools. They are also exposed over HTTP, MCP and the CLI. |
-| **Human-only action** | `decide-approval` has `agentTool: false`, `mcpTool: false`, so no agent can approve its own work. |
+| **Human-only actions** | `decide-approval` and `observe-recording` have `agentTool: false`, `mcpTool: false`: no agent can approve its own work. |
+| **Human-in-the-loop sends** | Every connector action that sends or changes something outside uses `needsApproval: true`, so the chat pauses for the user. |
+| **Secrets** | Connector keys are registered with `registerRequiredSecret` (managed in Settings) and resolved server-side; deployment env vars of the same name also work. |
+| **MCP + A2A** | The framework mounts `/mcp` and the A2A endpoint; OrgTwin adds team agent cards, A2A handoff records and `call-external-agent`. |
 | **Shared SQL** | Departments, skills, workflows, runs and requests live in the app database (PGlite locally, Postgres in production). |
 | **Live sync** | When the agent saves a skill or finishes a step, the map updates without a refresh. |
 | **Context awareness** | The selected team is the URL parameter `?dept=`, the open tab is `?panel=`. The agent sees both and moves the map with `set-search-params` when it talks about a team. `view-screen` gives it the selected team's details and the active run. |
@@ -58,8 +71,21 @@ Vultr's inference API is OpenAI-compatible, so OrgTwin uses the framework's Open
 | `AGENT_ENGINE` | `ai-sdk:openai` |
 | `AGENT_ENGINE_PREFER_BYO_KEY` | `true` |
 | `AGENT_MODEL` | A chat model from `GET /v1/models`, e.g. `qwen3.8-27b` |
+| `VULTR_VISION_MODEL` | Vision model for the Skill Recorder, e.g. `mimo-v2.6-pro` (auto-detected if unset) |
 
+The Vultr names also work on their own: if `VULTR_INFERENCE_API_KEY` (+ `VULTR_INFERENCE_BASE_URL`,
+`VULTR_INFERENCE_MODEL`) is set, OrgTwin maps it to the OpenAI-compatible settings above at startup.
 The model can also be changed in the app's agent settings.
+
+### Connector keys
+
+Add them in **Settings** or as environment variables (same names): `SLACK_WEBHOOK_URL`, `DISCORD_WEBHOOK_URL`,
+`TEAMS_WEBHOOK_URL`, `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`, `SMTP_HOST/PORT/USER/PASSWORD/FROM` (+
+`EMAIL_REDIRECT_TO` to send every email to one inbox while demoing), `NOTION_TOKEN` + `NOTION_DATABASE_ID`,
+`HUBSPOT_TOKEN`, `STRIPE_SECRET_KEY` (test keys only), `GOOGLE_SERVICE_ACCOUNT_JSON` + `GOOGLE_SHEET_ID`,
+`GITHUB_TOKEN` (+ `GITHUB_REPO`), `TAVILY_API_KEY` or `BRAVE_SEARCH_API_KEY` (optional), `WEBHOOK_ENABLED=true`
+(+ `WEBHOOK_ALLOWED_HOSTS`, `WEBHOOK_ALLOW_HTTP`). Anything missing stays in demo mode and the Connect tab says
+which key is needed.
 
 ## Project layout
 

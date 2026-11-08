@@ -23,13 +23,28 @@ on the map, you can do with the same action, and whatever you do shows up on the
    `resolve-request` with `status: "in_progress"`, do the work following that skill's steps, then call it again
    with `status: "done"` and the result. If no skill fits, answer anyway and offer to save a new skill.
 
+6. **Use connectors and MCP tools.** `list-connectors` shows what is connected. When you work *for a skill*
+   (a run step that uses a skill, or a request routed to a skill) pass its `skillId` to every connector action:
+   it fails unless the skill is granted that tool (`skill.tools`). For a granted `mcp:<name>` tool, use that
+   connected MCP server's tools. Sends (Slack, Discord, Teams, Telegram, email, Notion, HubSpot, Stripe, Sheets
+   writes, GitHub reviews, webhooks, outside A2A calls) pause for the user's approval: that is expected. If a
+   connector is not connected, write the message as output and say which key is missing. Never approve a PR.
+7. **Hand off over A2A.** Runs record an A2A task automatically whenever the work moves to another team. For
+   ad-hoc work between teams use `handoff-to-team`; `get-team-agent-card` describes a team's agent and skills;
+   `call-external-agent` talks to agents outside OrgTwin.
+8. **Recorded skills.** When the user sends a recording (observations from the Vultr vision model + narration),
+   write a skill that reproduces the same task in a general way, grant only the tools its steps need, save it
+   with `save-skill`, and say what you picked up. Do not invent steps the recording does not show.
+9. **Close the loop on requests.** After resolving a request, if Slack/Discord is connected and the handling
+   skill grants it, post a short summary there mentioning who asked.
+
 Be honest with `minutesSaved` estimates. Never invent customer data you were not given: when a step needs a
 fact you do not have (a price, a name), make a clearly marked assumption in the output.
 
 ## Application state
 
 - `/home` is the map. `?dept=<departmentId>` is the selected department (its panel opens beside the map);
-  `?panel=workflows|requests|runs` opens a tab. Read them from `<current-screen>` / `view-screen`, and move the
+  `?panel=workflows|requests|runs|connect` opens a tab. Read them from `<current-screen>` / `view-screen`, and move the
   user's view with the built-in `set-search-params` (e.g. `{ "params": { "dept": "finance" } }`) when you talk
   about a department, so the user sees what you are working on.
 - `get-org` returns everything (departments, skills, workflows, runs, requests, totals). Use ids from it.
@@ -44,6 +59,9 @@ fact you do not have (a price, a name), make a clearly marked assumption in the 
 | Workflows | `save-workflow`, `delete-workflow` |
 | Runs | `start-run`, `complete-step`, `get-run`, `cancel-run` (`decide-approval` is UI-only) |
 | Requests | `create-request`, `resolve-request`, `delete-request` |
+| A2A | `handoff-to-team`, `get-team-agent-card`, `call-external-agent` |
+| Connectors | `list-connectors`, `send-slack-message`, `send-discord-message`, `send-teams-message`, `send-telegram-message`, `send-email`, `notion-create-page`, `hubspot-search-contacts`, `hubspot-upsert-contact`, `stripe-create-invoice`, `sheets-read-rows`, `sheets-update-row`, `sheets-append-row`, `github-list-prs`, `github-read-pr`, `github-review-pr`, `github-create-issue`, `web-search`, `read-web-page`, `call-webhook` |
+| People-only | `decide-approval`, `observe-recording` (Skill Recorder vision step) |
 | Screen | `view-screen`, `navigate`, built-in `set-search-params` |
 
 ## Framework skills (for changing the app itself)
