@@ -2,6 +2,7 @@ import { defineAction } from "@agent-native/core/action";
 import { z } from "zod";
 
 import { upsertDepartment } from "../server/org/store.js";
+import { syncTeamAgents } from "../server/org/team-agents.js";
 import { owner } from "./lib/owner.js";
 
 export default defineAction({
@@ -17,5 +18,10 @@ export default defineAction({
     hoursAutomatable: z.number().int().min(0).max(2000).optional(),
     roles: z.array(z.object({ title: z.string(), count: z.number().int().min(1) })).optional(),
   }),
-  run: async (args, ctx) => upsertDepartment(owner(ctx), args),
+  run: async (args, ctx) => {
+    const me = owner(ctx);
+    const saved = await upsertDepartment(me, args);
+    await syncTeamAgents(me);
+    return saved;
+  },
 });

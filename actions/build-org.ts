@@ -2,6 +2,7 @@ import { defineAction } from "@agent-native/core/action";
 import { z } from "zod";
 
 import { getSnapshot, resetOrg, setCompany, upsertDepartment } from "../server/org/store.js";
+import { syncTeamAgents } from "../server/org/team-agents.js";
 import { owner } from "./lib/owner.js";
 
 const role = z.object({ title: z.string(), count: z.number().int().min(1).default(1) });
@@ -31,14 +32,17 @@ export default defineAction({
   }),
   run: async (args, ctx) => {
     const me = owner(ctx);
+    const before = args.replace ? (await getSnapshot(me)).departments.map((d) => d.id) : [];
     if (args.replace) await resetOrg(me);
     await setCompany(me, args.company);
     for (const d of args.departments) await upsertDepartment(me, d);
     const snap = await getSnapshot(me);
+    const teamAgents = await syncTeamAgents(me, before.filter((id) => !snap.departments.some((d) => d.id === id)));
     return {
+      teamAgents,
       company: snap.company,
       departments: snap.departments.map((d) => ({ id: d.id, name: d.name })),
-      next: "The map now shows one building per department. Offer to add skills for the busiest teams or design a cross-team workflow.",
+      next: "The map now shows one building per department, and each has its own sub-agent you can delegate to (agents/orgtwin-<id>.md). Offer to add skills for the busiest teams or design a cross-team workflow.",
     };
   },
 });

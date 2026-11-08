@@ -2,6 +2,7 @@ import { defineAction } from "@agent-native/core/action";
 import { z } from "zod";
 
 import { deleteDepartment } from "../server/org/store.js";
+import { syncTeamAgents } from "../server/org/team-agents.js";
 import { owner } from "./lib/owner.js";
 
 export default defineAction({
@@ -9,6 +10,7 @@ export default defineAction({
   schema: z.object({ id: z.string() }),
   run: async ({ id }, ctx) => {
     await deleteDepartment(owner(ctx), id);
+    await syncTeamAgents(owner(ctx), [id]);
     return { deleted: id };
   },
 });

@@ -2,6 +2,7 @@ import { defineAction } from "@agent-native/core/action";
 import { z } from "zod";
 
 import { upsertSkill } from "../server/org/store.js";
+import { syncTeamAgents } from "../server/org/team-agents.js";
 import { owner } from "./lib/owner.js";
 
 export default defineAction({
@@ -21,5 +22,10 @@ export default defineAction({
         "Outside tools this skill may use: slack, discord, teams, telegram, email, notion, hubspot, stripe, sheets, github, web, webhook, or mcp:<server name> for a connected MCP server. Only grant what the steps need.",
       ),
   }),
-  run: async (args, ctx) => upsertSkill(owner(ctx), args),
+  run: async (args, ctx) => {
+    const me = owner(ctx);
+    const saved = await upsertSkill(me, args);
+    await syncTeamAgents(me);
+    return saved;
+  },
 });
