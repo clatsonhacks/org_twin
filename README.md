@@ -26,6 +26,10 @@ off that team. Then you and the agent work on the same map:
   webhooks. Each skill lists the tools it may use; every send waits for a person's approval.
 - **🧩 MCP both ways.** Add any remote MCP server (Gmail, Linear, Jira, Zapier…) from the chat's + menu and
   grant it to a skill as `mcp:<name>`. And every OrgTwin action is itself an MCP tool at `/mcp`.
+- **🤖 A team of agents.** One OrgTwin agent plus one sub-agent per department, each with its own skills and
+  tool grants. Delegate to them or @mention them ("@Finance agent, draft the invoice").
+- **⏰ Weekly digest + automations.** A recurring job posts hours saved, finished runs and waiting approvals to
+  Slack/Discord every Monday; events let you add "whenever an approval is requested, ping #finance".
 - **🤝 A2A.** Each team's agent hands work to the next as an A2A task, visible in every run. OrgTwin publishes
   an agent card at `/.well-known/agent-card.json`, and its agent can message outside A2A agents.
 
@@ -40,6 +44,11 @@ Built with [Agent-Native](https://agent-native.com) for the Builder.io Agent-Nat
 | **Human-only actions** | `decide-approval` and `observe-recording` have `agentTool: false`, `mcpTool: false`: no agent can approve its own work. |
 | **Human-in-the-loop sends** | Every connector action that sends or changes something outside uses `needsApproval: true`, so the chat pauses for the user. |
 | **Secrets** | Connector keys are registered with `registerRequiredSecret` (managed in Settings) and resolved server-side; deployment env vars of the same name also work. |
+| **Sub-agent teams** | Every department is a custom agent profile (`agents/orgtwin-<team>.md`) with its mission, skills and tool grants, regenerated whenever the org changes. The main agent delegates team work to it; people can @mention it. |
+| **Native chat UI** | A custom `orgtwin.run-card` renderer shows run progress in chat, with Approve/Reject buttons that call the people-only action. `team-impact` uses the built-in chart widget. |
+| **Recurring jobs + events** | The weekly digest is a framework recurring job (`jobs/orgtwin-weekly-digest.md`). OrgTwin registers `orgtwin.approval.requested`, `orgtwin.run.completed` and `orgtwin.request.created` on the event bus for automations. |
+| **Deep links** | Actions declare `link`, so MCP hosts and the desktop app can open the exact team, run or request on the map. |
+| **Realtime sync** | The map opts into `useDbSync` realtime: approvals by teammates and job results appear without a refresh. |
 | **MCP + A2A** | The framework mounts `/mcp` and the A2A endpoint; OrgTwin adds team agent cards, A2A handoff records and `call-external-agent`. |
 | **Shared SQL** | Departments, skills, workflows, runs and requests live in the app database (PGlite locally, Postgres in production). |
 | **Live sync** | When the agent saves a skill or finishes a step, the map updates without a refresh. |
