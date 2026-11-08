@@ -14,6 +14,12 @@ export default defineAction({
     description: z.string().default("").describe("When to use it and what it produces"),
     steps: z.array(z.object({ title: z.string(), detail: z.string().default("") })).default([]),
     minutesSaved: z.number().int().min(0).max(600).default(15),
+    tools: z
+      .array(z.string())
+      .optional()
+      .describe(
+        "Outside tools this skill may use: slack, discord, teams, telegram, email, notion, hubspot, stripe, sheets, github, web, webhook, or mcp:<server name> for a connected MCP server. Only grant what the steps need.",
+      ),
   }),
   run: async (args, ctx) => upsertSkill(owner(ctx), args),
 });
