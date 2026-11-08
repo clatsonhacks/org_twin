@@ -133,3 +133,19 @@ export const DEPARTMENT_COLORS = [
   "#ec4899",
   "#84cc16",
 ];
+
+/** Tools a skill can be granted (ids match server/connectors/registry.ts). */
+export const TOOL_OPTIONS: Array<{ id: string; label: string }> = [
+  { id: "slack", label: "💬 Slack" },
+  { id: "discord", label: "🎮 Discord" },
+  { id: "teams", label: "🟪 Teams" },
+  { id: "telegram", label: "✈️ Telegram" },
+  { id: "email", label: "✉️ Email" },
+  { id: "notion", label: "📝 Notion" },
+  { id: "hubspot", label: "🧡 HubSpot" },
+  { id: "stripe", label: "💳 Stripe (test)" },
+  { id: "sheets", label: "📊 Sheets" },
+  { id: "github", label: "🐙 GitHub" },
+  { id: "web", label: "🔎 Web search" },
+  { id: "webhook", label: "🪝 Webhooks" },
+];

@@ -1,4 +1,4 @@
-import { useActionMutation } from "@agent-native/core/client/hooks";
+import { useActionMutation, useActionQuery } from "@agent-native/core/client/hooks";
 import { Badge } from "@agent-native/toolkit/ui/badge";
 import { Textarea } from "@agent-native/toolkit/ui/textarea";
 import { useState } from "react";
@@ -6,10 +6,11 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-import type { Department, OrgSnapshot, Run, Skill, Workflow } from "../../../shared/types";
+import { TOOL_OPTIONS, type Department, type OrgSnapshot, type Run, type Skill, type Workflow } from "../../../shared/types";
 import { askAgent } from "./agent";
+import { SkillRecorder } from "./SkillRecorder";
 
-export type PanelTab = "dept" | "workflows" | "runs" | "requests";
+export type PanelTab = "dept" | "workflows" | "runs" | "requests" | "connect";
 
 interface OrgPanelProps {
   org: OrgSnapshot;
@@ -24,6 +25,7 @@ const TABS: Array<{ id: PanelTab; label: string }> = [
   { id: "workflows", label: "Workflows" },
   { id: "runs", label: "Runs" },
   { id: "requests", label: "Requests" },
+  { id: "connect", label: "Connect" },
 ];
 
 export function OrgPanel({ org, tab, selected, onTab, onSelectDept }: OrgPanelProps) {
@@ -31,14 +33,14 @@ export function OrgPanel({ org, tab, selected, onTab, onSelectDept }: OrgPanelPr
   const openRequests = org.requests.filter((r) => r.status !== "done").length;
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 gap-1 border-b px-2 py-2" role="tablist">
+      <div className="flex shrink-0 gap-1 overflow-x-auto border-b px-2 py-2" role="tablist">
         {TABS.map((t) => (
           <button
             key={t.id}
             role="tab"
             aria-selected={tab === t.id}
             onClick={() => onTab(t.id)}
-            className={`relative rounded-md px-3 py-1.5 text-sm transition-colors ${
+            className={`relative shrink-0 rounded-md px-2.5 py-1.5 text-sm transition-colors ${
               tab === t.id ? "bg-accent font-medium text-foreground" : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -61,6 +63,7 @@ export function OrgPanel({ org, tab, selected, onTab, onSelectDept }: OrgPanelPr
         {tab === "workflows" && <WorkflowsTab org={org} onShowRuns={() => onTab("runs")} />}
         {tab === "runs" && <RunsTab org={org} />}
         {tab === "requests" && <RequestsTab org={org} />}
+        {tab === "connect" && <ConnectTab org={org} />}
       </div>
     </div>
   );
@@ -77,6 +80,7 @@ function DeptTab({
   dept: Department | null;
   onSelectDept: (id: string) => void;
 }) {
+  const [recording, setRecording] = useState(false);
   if (!dept) {
     return (
       <div className="space-y-3">
@@ -106,6 +110,7 @@ function DeptTab({
   const skills = org.skills.filter((s) => s.departmentId === dept.id);
   return (
     <div className="space-y-5">
+      {recording && <SkillRecorder dept={dept} onClose={() => setRecording(false)} />}
       <header className="space-y-1">
         <div className="flex items-center gap-2">
           <span className="text-2xl">{dept.emoji}</span>
@@ -131,6 +136,10 @@ function DeptTab({
       <section className="space-y-2">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold">Skills of the {dept.name} agent</h3>
+          <div className="flex gap-1.5">
+          <Button size="xs" variant="outline" onClick={() => setRecording(true)}>
+            🎬 Record
+          </Button>
           <Button
             size="xs"
             variant="outline"
@@ -141,8 +150,9 @@ function DeptTab({
               )
             }
           >
-            ✦ Suggest skills
+            ✦ Suggest
           </Button>
+          </div>
         </div>
         {skills.length === 0 && (
           <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
@@ -178,6 +188,7 @@ function SkillCard({ skill, dept }: { skill: Skill; dept: Department }) {
           <span className="block text-sm font-medium">{skill.name}</span>
           <span className="block text-xs text-muted-foreground">
             saves ~{skill.minutesSaved} min · used {skill.timesUsed}×
+            {skill.tools.length > 0 && ` · 🧰 ${skill.tools.join(", ")}`}
           </span>
         </span>
         <span className="text-xs text-muted-foreground">{open ? "▾" : "▸"}</span>
@@ -193,6 +204,7 @@ function SkillCard({ skill, dept }: { skill: Skill; dept: Department }) {
               </li>
             ))}
           </ol>
+          <SkillTools skill={skill} />
           <div className="flex gap-2 pt-1">
             <Button
               size="xs"
@@ -219,6 +231,70 @@ function SkillCard({ skill, dept }: { skill: Skill; dept: Department }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function SkillTools({ skill }: { skill: Skill }) {
+  const save = useActionMutation("save-skill");
+  const [mcp, setMcp] = useState("");
+  const set = (tools: string[]) =>
+    save.mutate({
+      id: skill.id,
+      departmentId: skill.departmentId,
+      name: skill.name,
+      description: skill.description,
+      steps: skill.steps,
+      minutesSaved: skill.minutesSaved,
+      tools,
+    });
+  const toggle = (id: string) =>
+    set(skill.tools.includes(id) ? skill.tools.filter((t) => t !== id) : [...skill.tools, id]);
+  const mcpTools = skill.tools.filter((t) => t.startsWith("mcp:"));
+  return (
+    <div className="space-y-1.5 rounded-md border bg-muted/30 p-2">
+      <p className="text-[11px] font-medium">🧰 Tools this skill may use</p>
+      <div className="flex flex-wrap gap-1">
+        {TOOL_OPTIONS.map((t) => {
+          const on = skill.tools.includes(t.id);
+          return (
+            <button
+              key={t.id}
+              disabled={save.isPending}
+              onClick={() => toggle(t.id)}
+              aria-pressed={on}
+              className={`rounded-full border px-2 py-0.5 text-[11px] ${on ? "border-emerald-500 bg-emerald-500/15 text-emerald-800 dark:text-emerald-200" : "text-muted-foreground hover:bg-accent"}`}
+            >
+              {on ? "✓ " : ""}
+              {t.label}
+            </button>
+          );
+        })}
+        {mcpTools.map((t) => (
+          <button
+            key={t}
+            onClick={() => toggle(t)}
+            className="rounded-full border border-sky-500 bg-sky-500/15 px-2 py-0.5 text-[11px] text-sky-800 dark:text-sky-200"
+            title="Remove"
+          >
+            ✓ 🔌 {t.slice(4)}
+          </button>
+        ))}
+      </div>
+      <form
+        className="flex gap-1"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const name = mcp.trim();
+          if (name && !skill.tools.includes(`mcp:${name}`)) set([...skill.tools, `mcp:${name}`]);
+          setMcp("");
+        }}
+      >
+        <Input value={mcp} onChange={(e) => setMcp(e.target.value)} placeholder="MCP server or tool name" className="h-7 text-xs" />
+        <Button size="xs" variant="outline" type="submit">
+          + MCP
+        </Button>
+      </form>
     </div>
   );
 }
@@ -405,6 +481,7 @@ function RunCard({ org, run, defaultOpen }: { org: OrgSnapshot; run: Run; defaul
           {run.steps.map((s, i) => (
             <RunStepRow key={s.id} org={org} run={run} index={i} />
           ))}
+          <A2AFeed org={org} runId={run.id} />
         </ol>
       )}
     </article>
@@ -579,5 +656,162 @@ function RequestsTab({ org }: { org: OrgSnapshot }) {
         );
       })}
     </div>
+  );
+}
+
+/* ---------------- A2A ---------------- */
+
+function A2AFeed({ org, runId }: { org: OrgSnapshot; runId?: string }) {
+  const msgs = org.messages.filter((m) => (runId ? m.runId === runId : true));
+  if (msgs.length === 0) return null;
+  return (
+    <li className="space-y-1 border-t pt-2">
+      <p className="text-[11px] font-semibold text-muted-foreground">A2A messages</p>
+      {[...msgs].reverse().map((m) => {
+        const from = deptOf(org, m.fromDepartmentId);
+        const to = deptOf(org, m.toDepartmentId);
+        return (
+          <div key={m.id} className="rounded-md bg-muted/40 p-1.5 text-[11px]">
+            <span className="font-medium">
+              📦 {from?.name ?? "agent"} → {to?.name ?? m.toAgentUrl}
+            </span>{" "}
+            <span className="text-muted-foreground">{m.kind === "external" ? "(outside agent)" : "task"}</span>
+            <div className="mt-0.5 line-clamp-2">{m.text}</div>
+            {m.reply && <div className="mt-0.5 line-clamp-3 text-muted-foreground">↩ {m.reply}</div>}
+          </div>
+        );
+      })}
+    </li>
+  );
+}
+
+/* ---------------- Connect ---------------- */
+
+interface ConnectorRow {
+  id: string;
+  name: string;
+  emoji: string;
+  what: string;
+  connected: boolean;
+  missing: string[];
+}
+
+function ConnectTab({ org }: { org: OrgSnapshot }) {
+  const { data } = useActionQuery<{ connectors: ConnectorRow[] }>("list-connectors", {});
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const external = org.messages.filter((m) => m.kind === "external");
+  return (
+    <div className="space-y-5">
+      <section className="space-y-2">
+        <h3 className="text-sm font-semibold">🔌 Connectors</h3>
+        <p className="text-xs text-muted-foreground">
+          Keys live in Settings (or the server environment) and never reach the browser or the agent. Every send asks
+          you to approve it first, and a skill can only use the tools ticked on it.
+        </p>
+        <div className="grid gap-1.5">
+          {(data?.connectors ?? []).map((c) => (
+            <div key={c.id} className="flex items-center gap-2 rounded-lg border px-3 py-2">
+              <span className="text-lg">{c.emoji}</span>
+              <span className="flex-1">
+                <span className="block text-sm font-medium">{c.name}</span>
+                <span className="block text-[11px] text-muted-foreground">
+                  {c.connected ? c.what : `Needs ${c.missing.join(", ")}`}
+                </span>
+              </span>
+              <span className={`text-[11px] font-medium ${c.connected ? "text-emerald-600" : "text-muted-foreground"}`}>
+                {c.connected ? "● connected" : "○ demo"}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button size="xs" variant="outline" onClick={() => window.location.assign("/settings")}>
+            Add keys in Settings
+          </Button>
+          <Button size="xs" variant="outline" onClick={() => askAgent("Which connectors are connected, and which would help our teams most?")}>
+            ✦ Ask the agent
+          </Button>
+        </div>
+      </section>
+
+      <section className="space-y-2">
+        <h3 className="text-sm font-semibold">🧩 MCP</h3>
+        <p className="text-xs text-muted-foreground">
+          <strong>Use other apps:</strong> add a remote MCP server (Gmail, Linear, Jira, Zapier, your own…) from the
+          chat's <kbd>+</kbd> menu; then grant it to a skill as <code>mcp:&lt;name&gt;</code>.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          <strong>Use OrgTwin from other AI tools:</strong> every OrgTwin action is an MCP tool (approvals stay
+          people-only).
+        </p>
+        <CopyRow label="MCP endpoint" value={`${origin}/mcp`} />
+      </section>
+
+      <section className="space-y-2">
+        <h3 className="text-sm font-semibold">🤝 A2A</h3>
+        <p className="text-xs text-muted-foreground">
+          Each team's agent hands work to the next team as an A2A task (see a run's messages). Outside agents can
+          discover OrgTwin and send it tasks; OrgTwin's agent can call them too.
+        </p>
+        <CopyRow label="Agent card" value={`${origin}/.well-known/agent-card.json`} />
+        <div className="flex flex-wrap gap-1.5">
+          {org.departments.map((d) => (
+            <Button
+              key={d.id}
+              size="xs"
+              variant="outline"
+              onClick={() => askAgent(`Show me the A2A agent card of the ${d.name} team and what work it can take.`, `departmentId=${d.id}`)}
+            >
+              {d.emoji} {d.name} card
+            </Button>
+          ))}
+        </div>
+        <ExternalAgentForm />
+        {external.length > 0 && <A2AFeed org={{ ...org, messages: external }} />}
+      </section>
+    </div>
+  );
+}
+
+function CopyRow({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-2 py-1.5">
+      <span className="text-[11px] text-muted-foreground">{label}</span>
+      <code className="flex-1 truncate text-[11px]">{value}</code>
+      <Button
+        size="xs"
+        variant="ghost"
+        onClick={() => {
+          void navigator.clipboard?.writeText(value);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1200);
+        }}
+      >
+        {copied ? "Copied" : "Copy"}
+      </Button>
+    </div>
+  );
+}
+
+function ExternalAgentForm() {
+  const [url, setUrl] = useState("");
+  const [text, setText] = useState("");
+  return (
+    <form
+      className="space-y-1.5 rounded-md border p-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        askAgent(`Send this to the outside A2A agent at ${url.trim()} and tell me its answer: ${text.trim()}`);
+        setText("");
+      }}
+    >
+      <p className="text-[11px] font-medium">Message an outside agent</p>
+      <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://other-agent.example.com" className="h-7 text-xs" />
+      <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="What should it do?" className="h-7 text-xs" />
+      <Button size="xs" type="submit" disabled={!url.trim() || !text.trim()}>
+        Send via A2A
+      </Button>
+    </form>
   );
 }

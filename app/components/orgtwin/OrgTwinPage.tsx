@@ -12,7 +12,7 @@ import { askAgent } from "./agent";
 import { OrgMap } from "./OrgMap";
 import { OrgPanel, type PanelTab } from "./OrgPanel";
 
-const PANELS: PanelTab[] = ["dept", "workflows", "runs", "requests"];
+const PANELS: PanelTab[] = ["dept", "workflows", "runs", "requests", "connect"];
 
 export default function OrgTwinPage() {
   useSetPageTitle("OrgTwin");
@@ -92,6 +92,9 @@ function Hud({ org, onTab }: { org: OrgSnapshot; onTab: (t: PanelTab) => void })
         </Button>
         <Button size="sm" variant="outline" onClick={() => onTab("workflows")}>
           🔀 Workflows
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => onTab("connect")}>
+          🔌 Connect
         </Button>
         <AgentToggleButton />
       </div>
