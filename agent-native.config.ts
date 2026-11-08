@@ -1,3 +1,4 @@
+import "./server/env-aliases";
 import { defineAgentNativeConfig } from "@agent-native/core/config";
 
 export default defineAgentNativeConfig({
