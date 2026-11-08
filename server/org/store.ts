@@ -16,6 +16,7 @@ import {
   type WorkflowStep,
 } from "../../shared/types.js";
 import { getDb } from "../db/index.js";
+import { emitOrgTwin } from "./events.js";
 import {
   companies,
   departments,
@@ -405,6 +406,16 @@ async function getRunRow(owner: string, id: string) {
   return row;
 }
 
+function emitRunEvents(owner: string, run: Run) {
+  if (run.status === "waiting_approval") {
+    const step = run.steps[run.currentStep]!;
+    emitOrgTwin("orgtwin.approval.requested", { runId: run.id, run: run.name, step: step.title, departmentId: step.departmentId }, owner);
+  } else if (run.status === "done" || run.status === "rejected") {
+    const minutesSaved = run.steps.reduce((a, s) => a + (s.status === "done" ? s.minutesSaved : 0), 0);
+    emitOrgTwin("orgtwin.run.completed", { runId: run.id, run: run.name, status: run.status, minutesSaved }, owner);
+  }
+}
+
 async function saveRun(run: Run) {
   await getDb()
     .update(runs)
@@ -481,6 +492,7 @@ export async function startRun(owner: string, workflowId: string, input: string)
     input,
     ownerEmail: owner,
   });
+  emitRunEvents(owner, run);
   return run;
 }
 
@@ -510,6 +522,7 @@ export async function completeStep(
   advance(run, stepIndex);
   await saveRun(run);
   await recordHandoffIfNeeded(owner, run, stepIndex);
+  emitRunEvents(owner, run);
   return run;
 }
 
@@ -595,6 +608,7 @@ export async function decideApproval(
     run.status = "rejected";
   }
   await saveRun(run);
+  emitRunEvents(owner, run);
   return run;
 }
 
@@ -633,6 +647,7 @@ export async function createRequest(
     ownerEmail: owner,
   });
   const [row] = await getDb().select().from(requests).where(eq(requests.id, id));
+  emitOrgTwin("orgtwin.request.created", { requestId: id, fromName: input.fromName, text: input.text }, owner);
   return toRequest(row!);
 }
 

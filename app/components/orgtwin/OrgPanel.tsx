@@ -433,11 +433,10 @@ function WorkflowsTab({ org, onShowRuns }: { org: OrgSnapshot; onShowRuns: () =>
 /* ---------------- Runs ---------------- */
 
 function RunsTab({ org }: { org: OrgSnapshot }) {
-  if (org.runs.length === 0) {
-    return <p className="text-sm text-muted-foreground">No runs yet. Press ▶ Run on a workflow.</p>;
-  }
   return (
     <div className="space-y-4">
+      <DigestCard />
+      {org.runs.length === 0 && <p className="text-sm text-muted-foreground">No runs yet. Press ▶ Run on a workflow.</p>}
       {org.runs.map((r, i) => (
         <RunCard key={r.id} org={org} run={r} defaultOpen={i === 0} />
       ))}
@@ -656,6 +655,63 @@ function RequestsTab({ org }: { org: OrgSnapshot }) {
         );
       })}
     </div>
+  );
+}
+
+/* ---------------- Weekly digest (recurring job) ---------------- */
+
+interface DigestSchedule {
+  exists: boolean;
+  enabled?: boolean;
+  schedule?: string | null;
+  post?: string;
+  lastRun?: string | null;
+  lastStatus?: string | null;
+}
+
+function DigestCard() {
+  const { data: job } = useActionQuery<DigestSchedule>("get-digest-schedule", {});
+  const schedule = useActionMutation("schedule-weekly-digest");
+  const preview = useActionMutation("weekly-digest");
+  const [post, setPost] = useState<"slack" | "discord" | "none">("slack");
+  const on = Boolean(job?.exists && job.enabled);
+  return (
+    <section className="space-y-2 rounded-lg border bg-muted/30 p-3">
+      <div className="flex items-center gap-2">
+        <h3 className="text-sm font-semibold">⏰ Weekly digest</h3>
+        <span className={`ml-auto text-[11px] ${on ? "text-emerald-600" : "text-muted-foreground"}`}>
+          {on ? `on · ${job?.post} · cron ${job?.schedule}` : "off"}
+        </span>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        A recurring agent job: every Monday it sums up hours saved by team, finished runs, top skills and approvals
+        that are waiting, and posts it to your channel.
+        {job?.lastRun ? ` Last run ${new Date(job.lastRun).toLocaleString()} (${job.lastStatus}).` : ""}
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          value={post}
+          onChange={(e) => setPost(e.target.value as typeof post)}
+          className="h-7 rounded-md border bg-background px-2 text-xs"
+          aria-label="Post the digest to"
+        >
+          <option value="slack">Post to Slack</option>
+          <option value="discord">Post to Discord</option>
+          <option value="none">Don't post</option>
+        </select>
+        <Button size="xs" disabled={schedule.isPending} onClick={() => schedule.mutate({ enabled: !on, day: 1, hour: 9, post })}>
+          {on ? "Turn off" : "Turn on (Mon 09:00)"}
+        </Button>
+        <Button size="xs" variant="outline" disabled={preview.isPending} onClick={() => preview.mutate({ post: "none" })}>
+          Preview
+        </Button>
+      </div>
+      {preview.data && (
+        <pre className="whitespace-pre-wrap rounded-md border bg-background p-2 text-[11px] leading-relaxed">
+          {(preview.data as { text?: string }).text}
+        </pre>
+      )}
+    </section>
   );
 }
 
