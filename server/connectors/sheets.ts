@@ -1,4 +1,5 @@
 import { createSign } from "node:crypto";
+import { readFile } from "node:fs/promises";
 
 import { requireSecret, secret } from "./registry.js";
 import { httpJson } from "./http.js";
@@ -9,11 +10,29 @@ async function accessToken(): Promise<string> {
   if (cached && cached.exp > Date.now() + 60_000) return cached.token;
   const raw = await requireSecret("GOOGLE_SERVICE_ACCOUNT_JSON", "Google Sheets");
   let sa: { client_email: string; private_key: string };
-  try {
-    // Either the JSON itself, or (as in a .env) base64 of it.
-    sa = JSON.parse(raw.trim().startsWith("{") ? raw : Buffer.from(raw, "base64").toString("utf8"));
-  } catch {
-    throw new Error("GOOGLE_SERVICE_ACCOUNT_JSON must contain the service account JSON (or its base64).");
+  const value = raw.trim();
+  // A path to the downloaded key file (e.g. /secrets/google-sa.json or C:\keys\sa.json).
+  if (/\.json$/i.test(value) && !value.startsWith("{")) {
+    let text: string;
+    try {
+      text = await readFile(value, "utf8");
+    } catch {
+      throw new Error(`GOOGLE_SERVICE_ACCOUNT_JSON points to ${value}, but that file can't be read.`);
+    }
+    try {
+      sa = JSON.parse(text);
+    } catch {
+      throw new Error(`${value} is not valid service account JSON.`);
+    }
+  } else {
+    try {
+      // Either the JSON itself, or (as in a .env) base64 of it.
+      sa = JSON.parse(value.startsWith("{") ? value : Buffer.from(value, "base64").toString("utf8"));
+    } catch {
+      throw new Error(
+        "GOOGLE_SERVICE_ACCOUNT_JSON must contain the service account JSON, its base64, or a path to the .json key file.",
+      );
+    }
   }
   const now = Math.floor(Date.now() / 1000);
   const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString("base64url");

@@ -73,8 +73,7 @@ describe("Chat settings route", () => {
       root.render(<SettingsRoute />);
     });
 
-    expect(pageProps.current?.whatsNewMarkdown).toContain(
-      "Chat retries the original request with its attachments after model setup.",
-    );
+    expect(pageProps.current?.whatsNewMarkdown).toContain("# What's new");
+    expect(pageProps.current?.whatsNewMarkdown).toContain("Skill Recorder");
   });
 });

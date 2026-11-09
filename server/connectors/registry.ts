@@ -100,7 +100,7 @@ export const CONNECTORS: ConnectorDef[] = [
     emoji: "📊",
     what: "Read and update rows",
     secrets: [
-      { key: "GOOGLE_SERVICE_ACCOUNT_JSON", label: "Google service account JSON (contents)" },
+      { key: "GOOGLE_SERVICE_ACCOUNT_JSON", label: "Google service account JSON (contents, base64, or path to the .json file)" },
       { key: "GOOGLE_SHEET_ID", label: "Default spreadsheet id" },
     ],
     actions: ["sheets-read-rows", "sheets-update-row", "sheets-append-row"],
