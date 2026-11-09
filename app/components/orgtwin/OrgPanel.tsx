@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 
 import { TOOL_OPTIONS, type Department, type OrgSnapshot, type Run, type Skill, type Workflow } from "../../../shared/types";
 import { askAgent } from "./agent";
+import { ConnectorsSection } from "./Connectors";
 import { SkillRecorder } from "./SkillRecorder";
 
 export type PanelTab = "dept" | "workflows" | "runs" | "requests" | "connect";
@@ -58,7 +59,7 @@ export function OrgPanel({ org, tab, selected, onTab, onSelectDept }: OrgPanelPr
           </button>
         ))}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4">
         {tab === "dept" && <DeptTab org={org} dept={selected} onSelectDept={onSelectDept} />}
         {tab === "workflows" && <WorkflowsTab org={org} onShowRuns={() => onTab("runs")} />}
         {tab === "runs" && <RunsTab org={org} />}
@@ -743,52 +744,15 @@ function A2AFeed({ org, runId }: { org: OrgSnapshot; runId?: string }) {
 
 /* ---------------- Connect ---------------- */
 
-interface ConnectorRow {
-  id: string;
-  name: string;
-  emoji: string;
-  what: string;
-  connected: boolean;
-  missing: string[];
-}
-
 function ConnectTab({ org }: { org: OrgSnapshot }) {
-  const { data } = useActionQuery<{ connectors: ConnectorRow[] }>("list-connectors", {});
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const external = org.messages.filter((m) => m.kind === "external");
   return (
     <div className="space-y-5">
-      <section className="space-y-2">
-        <h3 className="text-sm font-semibold">🔌 Connectors</h3>
-        <p className="text-xs text-muted-foreground">
-          Keys live in Settings (or the server environment) and never reach the browser or the agent. Every send asks
-          you to approve it first, and a skill can only use the tools ticked on it.
-        </p>
-        <div className="grid gap-1.5">
-          {(data?.connectors ?? []).map((c) => (
-            <div key={c.id} className="flex items-center gap-2 rounded-lg border px-3 py-2">
-              <span className="text-lg">{c.emoji}</span>
-              <span className="flex-1">
-                <span className="block text-sm font-medium">{c.name}</span>
-                <span className="block text-[11px] text-muted-foreground">
-                  {c.connected ? c.what : `Needs ${c.missing.join(", ")}`}
-                </span>
-              </span>
-              <span className={`text-[11px] font-medium ${c.connected ? "text-emerald-600" : "text-muted-foreground"}`}>
-                {c.connected ? "● connected" : "○ demo"}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button size="xs" variant="outline" onClick={() => window.location.assign("/settings")}>
-            Add keys in Settings
-          </Button>
-          <Button size="xs" variant="outline" onClick={() => askAgent("Which connectors are connected, and which would help our teams most?")}>
-            ✦ Ask the agent
-          </Button>
-        </div>
-      </section>
+      <ConnectorsSection />
+      <Button size="xs" variant="outline" onClick={() => askAgent("Which connectors are connected, and which would help our teams most?")}>
+        ✦ Which connectors would help us most?
+      </Button>
 
       <section className="space-y-2">
         <h3 className="text-sm font-semibold">🧩 MCP</h3>
@@ -833,8 +797,8 @@ function CopyRow({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-2 py-1.5">
-      <span className="text-[11px] text-muted-foreground">{label}</span>
-      <code className="flex-1 truncate text-[11px]">{value}</code>
+      <span className="shrink-0 text-[11px] text-muted-foreground">{label}</span>
+      <code className="min-w-0 flex-1 truncate text-[11px]">{value}</code>
       <Button
         size="xs"
         variant="ghost"

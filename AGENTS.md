@@ -60,7 +60,8 @@ fact you do not have (a price, a name), make a clearly marked assumption in the 
 ## Application state
 
 - `/home` is the map. `?dept=<departmentId>` is the selected department (its panel opens beside the map);
-  `?panel=workflows|requests|runs|connect` opens a tab. Read them from `<current-screen>` / `view-screen`, and move the
+  `?panel=workflows|requests|runs|connect` opens a tab, and `?inside=<departmentId>` means the user stepped inside that
+  department's office (desks per role). Read them from `<current-screen>` / `view-screen`, and move the
   user's view with the built-in `set-search-params` (e.g. `{ "params": { "dept": "finance" } }`) when you talk
   about a department, so the user sees what you are working on.
 - `get-org` returns everything (departments, skills, workflows, runs, requests, totals). Use ids from it.

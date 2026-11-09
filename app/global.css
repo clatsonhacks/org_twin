@@ -1,4 +1,6 @@
 @import "@fontsource-variable/inter";
+@import "@fontsource/pixelify-sans/400.css";
+@import "@fontsource/pixelify-sans/600.css";
 
 @import "tailwindcss";
 @import "@agent-native/toolkit/styles.css";
@@ -329,4 +331,119 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .ot-busy, .ot-bob, .ot-window-lit, .ot-dash { animation: none; }
+}
+
+/* ---------- 3D world (voxel island + offices) ---------- */
+.ot3-stage {
+  --ot3-ink: #1d2333;
+  --ot3-wood: #f1dfbb;
+  --ot3-wood-d: #6b4a2b;
+  --ot3-gold: #f6c443;
+  --ot3-grass: #5aa83a;
+  --ot3-grass-d: #3f7d27;
+  --ot3-pixel: "Pixelify Sans", ui-monospace, monospace;
+  background:
+    radial-gradient(1200px 500px at 70% -10%, #ffffffaa, transparent 60%),
+    linear-gradient(180deg, #7cc8ff 0%, #b4e2ff 45%, #e8f7ff 100%);
+}
+.dark .ot3-stage {
+  background:
+    radial-gradient(1000px 420px at 70% -10%, #3b5b9a55, transparent 60%),
+    linear-gradient(180deg, #0b1734 0%, #13254d 50%, #1d3366 100%);
+}
+.ot3-sign {
+  font-family: var(--ot3-pixel);
+  color: var(--ot3-ink);
+  background: var(--ot3-wood);
+  border: 2px solid var(--ot3-wood-d);
+  border-top: 5px solid var(--team, var(--ot3-gold));
+  border-radius: 6px;
+  padding: 3px 10px 4px;
+  text-align: center;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 3px 0 var(--ot3-wood-d);
+  user-select: none;
+}
+.ot3-sign b { display: block; font-size: 15px; font-weight: 600; line-height: 1.15; }
+.ot3-sign span { display: block; font-size: 12px; color: #6b4a2b; }
+.ot3-sign em { display: block; font-style: normal; font-size: 12px; }
+.ot3-sign-hq { --team: var(--ot3-gold); background: #fff6d6; }
+.ot3-sign-dim { opacity: 0.45; }
+.ot3-sign-office { cursor: default; }
+.ot3-live { color: var(--ot3-grass-d); animation: ot3-blink 1s steps(2) infinite; }
+.ot3-wait { color: #b45309; font-weight: 600; }
+.ot3-req { color: #0369a1; }
+@keyframes ot3-blink { 50% { opacity: 0.35; } }
+.ot3-nametag {
+  font-family: var(--ot3-pixel);
+  background: #000000a0;
+  color: #fff;
+  padding: 1px 8px;
+  border-radius: 3px;
+  white-space: nowrap;
+  font-size: 13px;
+  cursor: pointer;
+}
+.ot3-nametag small { color: #ffe27a; margin-left: 6px; font-size: 11px; }
+.ot3-nametag-on { background: #fff; color: var(--ot3-ink); outline: 2px solid var(--ot3-ink); }
+.ot3-nametag-on small { color: var(--ot3-grass-d); }
+.ot3-courier {
+  font-family: var(--ot3-pixel);
+  color: var(--ot3-ink);
+  background: var(--ot3-gold);
+  border: 2px solid var(--ot3-ink);
+  border-radius: 6px;
+  padding: 1px 8px;
+  font-size: 13px;
+  white-space: nowrap;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 2px 0 var(--ot3-ink);
+}
+.ot3-enter {
+  font-family: var(--ot3-pixel);
+  font-size: 14px;
+  background: var(--ot3-grass);
+  color: #fff;
+  border: 2px solid var(--ot3-ink);
+  border-radius: 6px;
+  padding: 3px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 3px 0 var(--ot3-ink);
+  text-shadow: 0 2px 0 var(--ot3-grass-d);
+  animation: ot3-bob 1.4s ease-in-out infinite;
+}
+@keyframes ot3-bob { 50% { transform: translateY(-3px); } }
+.ot3-rolesign {
+  font-family: var(--ot3-pixel);
+  color: var(--ot3-ink);
+  font-size: 13px;
+  background: #fffaf0;
+  border: 2px solid var(--ot3-ink);
+  border-left: 6px solid var(--team);
+  border-radius: 4px;
+  padding: 1px 8px;
+  white-space: nowrap;
+  box-shadow: 0 2px 0 var(--ot3-ink);
+  user-select: none;
+  pointer-events: none;
+}
+.ot3-rolesign small { margin-left: 6px; color: #6c6f7f; }
+.ot3-hud-btn {
+  font-family: var(--ot3-pixel);
+  font-size: 14px;
+  color: var(--ot3-ink);
+  background: #fffaf0;
+  border: 2px solid var(--ot3-ink);
+  border-radius: 8px;
+  padding: 4px 12px;
+  box-shadow: 0 3px 0 var(--ot3-ink);
+  cursor: pointer;
+}
+.ot3-hud-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ot3-ink); }
+@media (prefers-reduced-motion: reduce) {
+  .ot3-enter, .ot3-live { animation: none; }
 }

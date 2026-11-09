@@ -1,12 +1,16 @@
 import { createSign } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
+import { googleUserToken } from "./oauth.js";
 import { requireSecret, secret } from "./registry.js";
 import { httpJson } from "./http.js";
 
 let cached: { token: string; exp: number } | null = null;
 
 async function accessToken(): Promise<string> {
+  // Signed in with Google from the Connect tab: act as that account.
+  const user = await googleUserToken();
+  if (user) return user;
   if (cached && cached.exp > Date.now() + 60_000) return cached.token;
   const raw = await requireSecret("GOOGLE_SERVICE_ACCOUNT_JSON", "Google Sheets");
   let sa: { client_email: string; private_key: string };

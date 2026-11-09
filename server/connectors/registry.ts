@@ -188,20 +188,46 @@ export async function requireSecret(key: string, connector: string): Promise<str
 }
 
 export async function connectorStatus() {
+  const { ACCOUNT_KEY, CONNECTOR_SIGNIN, signinEnv, signinReady } = await import("./oauth.js");
+  const google = Boolean(await secret("GOOGLE_OAUTH_REFRESH_TOKEN"));
   return Promise.all(
     CONNECTORS.map(async (c) => {
       const required = c.secrets.filter((s) => !s.optional);
       const values = await Promise.all(required.map((s) => secret(s.key)));
-      const connected =
-        c.id === "webhook" ? values[0] === "true" : c.keyless ? true : values.every(Boolean);
+      let connected = c.id === "webhook" ? values[0] === "true" : c.keyless ? true : values.every(Boolean);
+      let missing = required.filter((_, i) => !values[i]).map((s) => s.key);
+      // Signing in with Google covers email (Gmail) and the Sheets credential.
+      if (c.id === "email" && !connected && google) {
+        connected = true;
+        missing = [];
+      }
+      if (c.id === "sheets" && google) {
+        missing = missing.filter((k) => k !== "GOOGLE_SERVICE_ACCOUNT_JSON");
+        connected = missing.length === 0;
+      }
+      const signin = CONNECTOR_SIGNIN[c.id] ?? null;
+      const account = signin ? await secret(ACCOUNT_KEY[signin]) : "";
       return {
         id: c.id,
         name: c.name,
         emoji: c.emoji,
         what: c.what,
         connected,
-        missing: required.filter((_, i) => !values[i]).map((s) => s.key),
+        missing,
         actions: c.actions,
+        signin,
+        signinReady: signin ? await signinReady(signin) : false,
+        signinEnv: signin ? signinEnv(signin) : [],
+        account,
+        fields: await Promise.all(
+          c.secrets.map(async (s) => ({
+            key: s.key,
+            label: s.label,
+            optional: Boolean(s.optional),
+            docsUrl: s.docsUrl ?? "",
+            set: Boolean(await secret(s.key)),
+          })),
+        ),
       };
     }),
   );

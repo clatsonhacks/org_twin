@@ -96,6 +96,20 @@ Add them in **Settings** or as environment variables (same names): `SLACK_WEBHOO
 (+ `WEBHOOK_ALLOWED_HOSTS`, `WEBHOOK_ALLOW_HTTP`). Anything missing stays in demo mode and the Connect tab says
 which key is needed.
 
+### One-click Connect
+
+Every connector card in the **Connect** tab has a **Connect** button. For Google (Sheets + Gmail), Stripe (test
+mode), Notion, Slack, Discord and HubSpot it opens the service's own sign-in popup; people click **Allow** and
+nothing is copied. Telegram connects by pressing **Start** on the bot. The token is saved encrypted under the same
+key the connector already reads (org owners/admins save it for the workspace, other members for themselves), and
+**Disconnect** revokes it where the service allows. Without a sign-in, the dialog falls back to pasting a key.
+
+To turn sign-in on, register OrgTwin once with each service and set its client id and secret (`.env` or Settings):
+`GOOGLE_OAUTH_CLIENT_ID/SECRET`, `STRIPE_CONNECT_CLIENT_ID/SECRET_KEY`, `NOTION_OAUTH_CLIENT_ID/SECRET`,
+`SLACK_CLIENT_ID/SECRET`, `DISCORD_CLIENT_ID/SECRET`, `HUBSPOT_CLIENT_ID/SECRET`. The redirect URI is
+`<app address>/api/oauth/<service>/callback` (for example `http://localhost:8080/api/oauth/google/callback`);
+the Connect dialog shows the exact address. Slack (and sometimes Notion) only accept `https` addresses.
+
 ## Project layout
 
 ```
@@ -104,7 +118,9 @@ server/db/            schema and migrations
 server/org/store.ts   data access and the run state machine
 server/org/sample.ts  the sample company
 shared/types.ts       types shared by server and UI
-app/components/orgtwin/  the map (OrgMap), side panel (OrgPanel) and page
+app/components/orgtwin/  the page, side panel (OrgPanel), Connect dialog (Connectors) and flat fallback map (OrgMap)
+app/components/orgtwin/world/  the 3D voxel island and the offices inside each building (three.js)
+server/connectors/oauth.ts  one-click Connect: sign-in popups, token storage, Gmail, Telegram
 AGENTS.md             the agent's instructions
 ```
 

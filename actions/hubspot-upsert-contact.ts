@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { requireGrant, requireSecret } from "../server/connectors/registry.js";
 import { httpJson } from "../server/connectors/http.js";
+import { hubspotToken } from "../server/connectors/oauth.js";
 import { owner } from "./lib/owner.js";
 
 export default defineAction({
@@ -16,7 +17,8 @@ export default defineAction({
   needsApproval: true,
   run: async ({ email, properties, skillId }, ctx) => {
     await requireGrant(owner(ctx), skillId, "hubspot");
-    const token = await requireSecret("HUBSPOT_TOKEN", "HubSpot");
+    const token = await hubspotToken();
+    if (!token) await requireSecret("HUBSPOT_TOKEN", "HubSpot");
     const headers = { Authorization: `Bearer ${token}` };
     const found = await httpJson<{ results: Array<{ id: string }> }>(
       "https://api.hubapi.com/crm/v3/objects/contacts/search",

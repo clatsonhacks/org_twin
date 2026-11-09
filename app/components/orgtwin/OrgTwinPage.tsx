@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/button";
 
 import type { OrgSnapshot } from "../../../shared/types";
 import { askAgent } from "./agent";
-import { OrgMap } from "./OrgMap";
 import { OrgPanel, type PanelTab } from "./OrgPanel";
+import { Stage3D } from "./Stage3D";
 
 const PANELS: PanelTab[] = ["dept", "workflows", "runs", "requests", "connect"];
 
@@ -49,10 +49,12 @@ export default function OrgTwinPage() {
       <Hud org={org} onTab={(t) => update({ panel: t === "dept" ? null : t })} />
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <div className="ot-stage relative min-h-[320px] flex-1 overflow-hidden">
-          <OrgMap
+          <Stage3D
             org={org}
             selectedId={selected?.id ?? null}
-            onSelect={(id) => update({ dept: id, panel: id ? null : params.get("panel") })}
+            onSelect={(id) => update({ dept: id, panel: id ? null : params.get("panel"), ...(id ? {} : { inside: null }) })}
+            inside={params.get("inside")}
+            onInside={(id) => update({ inside: id, ...(id ? { dept: id, panel: null } : {}) })}
           />
           <Legend />
         </div>
@@ -121,7 +123,7 @@ function Chip({ label, value, tone }: { label: string; value: number; tone: stri
 function Legend() {
   return (
     <div className="pointer-events-none absolute bottom-3 left-3 hidden flex-col gap-1 rounded-lg border bg-background/85 px-3 py-2 text-[11px] text-muted-foreground backdrop-blur sm:flex">
-      <span>▮ beam = hours a week AI could take off the team</span>
+      <span>▮ beam = hours a week AI could take off the team · click a building twice to step inside</span>
       <span>
         <span className="text-emerald-600">⚙</span> agent working · <span className="text-amber-600">!</span> needs your
         approval · <span className="text-sky-600">✉</span> request · 📦 handoff
