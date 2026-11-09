@@ -125,11 +125,11 @@ export async function loadSampleCompany(owner: string) {
     name: "Lead to cash",
     goal: "Take a new inbound lead all the way to a paid invoice and an onboarding plan.",
     steps: [
-      { departmentId: k("sales"), kind: "work", title: "Qualify the lead", instructions: "Use the 'Qualify inbound lead' skill on the run input. Output the score and the drafted first email." },
-      { departmentId: k("sales"), kind: "work", title: "Prepare the quote", instructions: "Assume the lead said yes. Size the fleet and price it with the 'Prepare a quote' skill." },
-      { departmentId: k("finance"), kind: "work", title: "Draft the invoice", instructions: "Turn the quote into invoice lines with totals and terms." },
-      { departmentId: k("finance"), kind: "approval", title: "Finance approves the invoice", instructions: "A person in Finance checks the invoice before it is sent." },
-      { departmentId: k("success"), kind: "work", title: "Onboarding plan + welcome email", instructions: "Write the 30-day onboarding plan and the welcome email for the customer." },
+      { departmentId: k("sales"), kind: "work", title: "Qualify the lead", minutes: 20, instructions: "Use the 'Qualify inbound lead' skill on the run input. Output the score and the drafted first email." },
+      { departmentId: k("sales"), kind: "work", title: "Prepare the quote", minutes: 40, instructions: "Assume the lead said yes. Size the fleet and price it with the 'Prepare a quote' skill." },
+      { departmentId: k("finance"), kind: "work", title: "Draft the invoice", minutes: 30, instructions: "Turn the quote into invoice lines with totals and terms." },
+      { departmentId: k("finance"), kind: "approval", title: "Finance approves the invoice", minutes: 5, instructions: "A person in Finance checks the invoice before it is sent." },
+      { departmentId: k("success"), kind: "work", title: "Onboarding plan + welcome email", minutes: 60, instructions: "Write the 30-day onboarding plan and the welcome email for the customer." },
     ],
   });
   await upsertWorkflow(owner, {
@@ -137,9 +137,9 @@ export async function loadSampleCompany(owner: string) {
     name: "New hire onboarding",
     goal: "Get a new engineer from signed offer to productive in week one.",
     steps: [
-      { departmentId: k("people"), kind: "work", title: "Welcome pack", instructions: "Write the first-week schedule and welcome email." },
-      { departmentId: k("engineering"), kind: "work", title: "Access + starter task", instructions: "List the accounts to create and pick a good first task." },
-      { departmentId: k("people"), kind: "approval", title: "Manager signs off", instructions: "The hiring manager confirms the plan." },
+      { departmentId: k("people"), kind: "work", title: "Welcome pack", minutes: 45, instructions: "Write the first-week schedule and welcome email." },
+      { departmentId: k("engineering"), kind: "work", title: "Access + starter task", minutes: 30, instructions: "List the accounts to create and pick a good first task." },
+      { departmentId: k("people"), kind: "approval", title: "Manager signs off", minutes: 5, instructions: "The hiring manager confirms the plan." },
     ],
   });
   const snap = await getSnapshot(owner);

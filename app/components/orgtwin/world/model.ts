@@ -7,7 +7,9 @@ export interface TeamView {
   emoji: string;
   color: string;
   headcount: number;
-  hours: number;
+  /** Hours AI has actually saved this team (finished run steps and answered requests). */
+  savedHours: number;
+  skills: number;
   roles: RoleView[];
 }
 
@@ -15,27 +17,21 @@ export interface RoleView {
   key: string;
   name: string;
   headcount: number;
-  hours: number;
 }
 
-export function toTeam(d: Department): TeamView {
+export function toTeam(d: Department, savedMinutes = 0, skills = 0): TeamView {
   const roles = d.roles.filter((r) => r.title.trim());
-  const total = Math.max(1, roles.reduce((n, r) => n + Math.max(1, r.count), 0));
   return {
     key: d.id,
     name: d.name,
     emoji: d.emoji,
     color: d.color,
     headcount: d.headcount,
-    hours: d.hoursAutomatable,
+    savedHours: Math.round((savedMinutes / 60) * 10) / 10,
+    skills,
     roles: roles.length
-      ? roles.map((r, i) => ({
-          key: `r${i}`,
-          name: r.title,
-          headcount: Math.max(1, r.count),
-          hours: Math.round((d.hoursAutomatable * Math.max(1, r.count)) / total),
-        }))
-      : [{ key: "r0", name: "Team", headcount: Math.max(1, d.headcount), hours: d.hoursAutomatable }],
+      ? roles.map((r, i) => ({ key: `r${i}`, name: r.title, headcount: Math.max(1, r.count) }))
+      : [{ key: "r0", name: "Team", headcount: Math.max(1, d.headcount) }],
   };
 }
 

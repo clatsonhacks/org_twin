@@ -84,7 +84,7 @@ function Hud({ org, onTab }: { org: OrgSnapshot; onTab: (t: PanelTab) => void })
           <p className="hidden truncate text-xs text-muted-foreground lg:block">{org.company.description}</p>
         )}
       </div>
-      <Chip label="h/wk AI could take" value={s.hoursAutomatable} tone="indigo" />
+      <Chip label="skills taught" value={org.skills.length} tone="indigo" />
       <Chip label="hours saved" value={s.hoursSaved} tone="emerald" />
       <Chip label="runs done" value={s.runsDone} tone="slate" />
       <button onClick={() => onTab("runs")} className="contents">
@@ -165,7 +165,7 @@ function Chip({ label, value, tone }: { label: string; value: number; tone: stri
 function Legend() {
   return (
     <div className="pointer-events-none absolute bottom-3 left-3 hidden flex-col gap-1 rounded-lg border bg-background/85 px-3 py-2 text-[11px] text-muted-foreground backdrop-blur sm:flex">
-      <span>▮ beam = hours a week AI could take off the team · click a building twice to step inside</span>
+      <span>▮ beam = hours AI has saved the team so far · click a building twice to step inside</span>
       <span>
         <span className="text-emerald-600">⚙</span> agent working · <span className="text-amber-600">!</span> needs your
         approval · <span className="text-sky-600">✉</span> request · 📦 handoff

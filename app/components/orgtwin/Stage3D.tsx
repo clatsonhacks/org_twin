@@ -33,12 +33,16 @@ export function Stage3D({ org, selectedId, onSelect, inside, onInside }: Stage3D
   const [mode, setMode] = useState<"pending" | "3d" | "flat">("pending");
   useEffect(() => setMode(webglAvailable() ? "3d" : "flat"), []);
 
-  const teams = useMemo(() => org.departments.map(toTeam), [org.departments]);
   const skills = useMemo(() => {
     const out: Record<string, number> = {};
     for (const s of org.skills) out[s.departmentId] = (out[s.departmentId] ?? 0) + 1;
     return out;
   }, [org.skills]);
+  const saved = org.stats.savedMinutesByDept;
+  const teams = useMemo(
+    () => org.departments.map((d) => toTeam(d, saved[d.id] ?? 0, skills[d.id] ?? 0)),
+    [org.departments, saved, skills],
+  );
 
   const run = activeRun(org);
   const step = run ? run.steps[run.currentStep] : undefined;

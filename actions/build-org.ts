@@ -10,7 +10,7 @@ const role = z.object({ title: z.string(), count: z.number().int().min(1).defaul
 
 export default defineAction({
   description:
-    "Build (or rebuild) the company twin from your understanding of the company: sets the company profile and creates one department per team. Use when the user describes their company, pastes an org chart, or asks to start over. Estimate hoursAutomatable = realistic hours per week AI could take off that team's plate. replace=true (default) clears the existing org, skills, workflows, runs and requests first.",
+    "Build (or rebuild) the company twin from your understanding of the company: sets the company profile and creates one department per team. Use when the user describes their company, pastes an org chart, or asks to start over. replace=true (default) clears the existing org, skills, workflows, runs and requests first.",
   schema: z.object({
     company: z.object({
       name: z.string().min(1),
@@ -23,7 +23,7 @@ export default defineAction({
           emoji: z.string().default("🏢").describe("One emoji for the building"),
           mission: z.string().default("").describe("What this team is responsible for, one sentence"),
           headcount: z.number().int().min(1).default(3),
-          hoursAutomatable: z.number().int().min(0).max(2000).default(10),
+          hoursAutomatable: z.number().int().min(0).max(2000).default(0).describe("Not used any more; leave 0."),
           roles: z.array(role).default([]),
         }),
       )

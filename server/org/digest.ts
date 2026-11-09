@@ -18,7 +18,10 @@ export async function buildDigest(owner: string, now = Date.now()) {
   }
   const weekRequests = snap.requests.filter((q) => Date.parse(q.createdAt) >= since);
   for (const q of weekRequests) {
-    if (q.status === "done" && q.departmentId) minutesByTeam.set(q.departmentId, (minutesByTeam.get(q.departmentId) ?? 0) + 30);
+    const skill = q.skillId ? snap.skills.find((s) => s.id === q.skillId) : undefined;
+    if (q.status === "done" && q.departmentId && skill) {
+      minutesByTeam.set(q.departmentId, (minutesByTeam.get(q.departmentId) ?? 0) + skill.minutesSaved);
+    }
   }
   const totalHours = Math.round(([...minutesByTeam.values()].reduce((a, b) => a + b, 0) / 60) * 10) / 10;
   const waiting = snap.runs.filter((r) => r.status === "waiting_approval");
@@ -27,7 +30,7 @@ export async function buildDigest(owner: string, now = Date.now()) {
 
   const lines = [
     `*OrgTwin weekly digest — ${snap.company?.name ?? "your company"}*`,
-    `⏱ ${totalHours} h given back to people this week (${snap.stats.hoursAutomatable} h/week possible).`,
+    `⏱ ${totalHours} h given back to people this week (${snap.stats.hoursSaved} h in total so far).`,
     `🔀 ${weekRuns.filter((r) => r.status === "done").length} workflow runs finished, ${weekRequests.length} team requests.`,
   ];
   if (minutesByTeam.size) {

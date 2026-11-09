@@ -47,7 +47,8 @@ export function OrgMap({ org, selectedId, onSelect }: OrgMapProps) {
   const requestDepts = new Set(
     org.requests.filter((r) => r.status === "in_progress" && r.departmentId).map((r) => r.departmentId),
   );
-  const maxHours = Math.max(1, ...org.departments.map((d) => d.hoursAutomatable));
+  const savedBy = org.stats.savedMinutesByDept;
+  const maxSaved = Math.max(1, ...org.departments.map((d) => savedBy[d.id] ?? 0));
 
   const extent = placed.reduce(
     (acc, p) => ({
@@ -149,7 +150,7 @@ export function OrgMap({ org, selectedId, onSelect }: OrgMapProps) {
           active={activeDept === p.dept.id && run?.status === "running"}
           waiting={waitingDept === p.dept.id}
           hasRequest={requestDepts.has(p.dept.id)}
-          beam={(p.dept.hoursAutomatable / maxHours) * 110}
+          beam={((savedBy[p.dept.id] ?? 0) / maxSaved) * 110}
           onSelect={onSelect}
         />
       ))}
@@ -185,7 +186,7 @@ function Label({ p, selected, onSelect }: { p: Placed; selected: boolean; onSele
         {dept.name}
       </text>
       <text x={x} y={y + b + 48} textAnchor="middle" className="fill-muted-foreground text-[10px]">
-        {dept.headcount} people · {dept.hoursAutomatable}h/wk AI
+        {dept.headcount} people
       </text>
     </g>
   );
@@ -223,7 +224,7 @@ function Building({
         onSelect(dept.id);
       }}
       role="button"
-      aria-label={`${dept.name}: ${dept.headcount} people, ${dept.hoursAutomatable} hours a week automatable`}
+      aria-label={`${dept.name}: ${dept.headcount} people`}
     >
       {/* footprint / selection ring */}
       <polygon
@@ -232,7 +233,7 @@ function Building({
         stroke={selected ? c : "transparent"}
         strokeWidth={3}
       />
-      {/* beacon: hours AI could save */}
+      {/* beacon: hours AI has saved so far */}
       <rect x={x - 6} y={y - h - b - beam} width={12} height={beam} fill={`url(#ot-beam-${dept.id})`} />
       {/* left face */}
       <polygon

@@ -97,7 +97,7 @@ function Scene({
   const layout = useMemo(() => buildLayout(teams), [teams]);
   const controls = useRef<any>(null);
   const plot = selectedTeam ? (layout.plots.find((p) => p.key === selectedTeam) ?? null) : null;
-  const maxHours = Math.max(1, ...teams.map((t) => t.hours));
+  const maxSaved = Math.max(1, ...teams.map((t) => t.savedHours));
   const narrow = useThree((s) => s.size.width <= 900);
   const insideTeam = inside ? (teams.find((t) => t.key === inside) ?? null) : null;
   const office = useMemo(() => (insideTeam ? buildOffice(insideTeam, insideTeam.color) : null), [insideTeam]);
@@ -168,7 +168,7 @@ function Scene({
             active={activeTeam === t.key}
             waiting={approvalTeams.includes(t.key)}
             request={requestTeams.includes(t.key)}
-            beacon={t.hours / maxHours}
+            beacon={t.savedHours / maxSaved}
             skilled={(skills[t.key] ?? 0) > 0}
             onSelect={() => onSelectTeam(t.key)}
             onEnter={() => onEnter(t.key)}
@@ -471,8 +471,9 @@ function Building({
               {team.emoji} {team.name}
             </b>
             <span>
-              {team.headcount} people · ⚡ {team.hours} h/wk
+              {team.headcount} people · 📘 {team.skills} {team.skills === 1 ? "skill" : "skills"}
             </span>
+            {team.savedHours > 0 && <span>⏱ {team.savedHours} h saved</span>}
             {active && <em className="ot3-live">agent working…</em>}
             {waiting && <em className="ot3-wait">! needs your approval</em>}
             {request && !active && <em className="ot3-req">✉ request in progress</em>}
@@ -577,7 +578,7 @@ function Workers({
           skin={SKIN[(i + team.key.length) % SKIN.length]!}
           active={active}
           name={r.name}
-          hours={r.hours}
+          count={r.headcount}
           showName={showNames}
           phase={i}
           skilled={skilled && i === 0}
@@ -595,7 +596,7 @@ function Worker({
   skin,
   active,
   name,
-  hours,
+  count,
   showName,
   phase,
   skilled,
@@ -607,7 +608,7 @@ function Worker({
   skin: string;
   active: boolean;
   name: string;
-  hours: number;
+  count: number;
   showName: boolean;
   phase: number;
   skilled: boolean;
@@ -682,7 +683,7 @@ function Worker({
         <Html position={[0, tagY, 0]} center zIndexRange={[9, 0]}>
           <div className="ot3-nametag" onClick={stop(onClick)}>
             {name}
-            <small>⚡{hours}h</small>
+            <small>×{count}</small>
           </div>
         </Html>
       )}

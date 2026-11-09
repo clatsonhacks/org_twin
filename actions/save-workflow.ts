@@ -7,7 +7,7 @@ import { owner } from "./lib/owner.js";
 
 export default defineAction({
   description:
-    "Create or update (when id is given) a cross-team workflow. Each step belongs to one department. kind='work' is done by that department's agent (you); kind='approval' pauses the run until a person in that department approves on the map. Put an approval step before anything that sends money, emails customers or changes records outside the app. When consecutive steps are in different departments the map shows a handoff.",
+    "Create or update (when id is given) a cross-team workflow. Each step belongs to one department. kind='work' is done by that department's agent (you); kind='approval' pauses the run until a person in that department approves on the map. Put an approval step before anything that sends money, emails customers or changes records outside the app. When consecutive steps are in different departments the map shows a handoff. Give every step a minutes estimate (time a person needs by hand); people can adjust it in the Workflows panel.",
   schema: z.object({
     id: z.string().optional(),
     name: z.string().min(1),
@@ -20,6 +20,13 @@ export default defineAction({
           kind: z.enum(["work", "approval"]).default("work"),
           title: z.string().min(1),
           instructions: z.string().default("").describe("What the agent must produce in this step"),
+          minutes: z
+            .number()
+            .int()
+            .min(0)
+            .max(600)
+            .optional()
+            .describe("Minutes this step usually takes a person by hand. Your honest estimate unless the person said."),
         }),
       )
       .min(1)

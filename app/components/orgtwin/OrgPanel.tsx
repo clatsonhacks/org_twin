@@ -96,8 +96,11 @@ function DeptTab({
               <span className="flex-1">
                 <span className="block text-sm font-medium">{d.name}</span>
                 <span className="block text-xs text-muted-foreground">
-                  {org.skills.filter((s) => s.departmentId === d.id).length} skills · {d.hoursAutomatable}h/wk
-                  automatable
+                  {(() => {
+                    const n = org.skills.filter((s) => s.departmentId === d.id).length;
+                    return `${n} ${n === 1 ? "skill" : "skills"}`;
+                  })()}
+                  {(org.stats.savedMinutesByDept[d.id] ?? 0) > 0 && ` · ⏱ ${hours(org.stats.savedMinutesByDept[d.id]!)} h saved`}
                 </span>
               </span>
               <span className="h-2.5 w-2.5 rounded-full" style={{ background: d.color }} />
@@ -121,7 +124,7 @@ function DeptTab({
       </header>
       <div className="grid grid-cols-3 gap-2 text-center">
         <Stat label="people" value={dept.headcount} />
-        <Stat label="h/wk AI could take" value={dept.hoursAutomatable} />
+        <Stat label="hours saved" value={hours(org.stats.savedMinutesByDept[dept.id] ?? 0)} />
         <Stat label="skills" value={skills.length} />
       </div>
       {dept.roles.length > 0 && (
@@ -168,6 +171,67 @@ function DeptTab({
   );
 }
 
+const hours = (minutes: number) => Math.round((minutes / 60) * 10) / 10;
+
+/** "Usually takes ~N min by hand": an AI estimate people can correct in place. */
+function MinutesEditor({
+  value,
+  onSave,
+  saving,
+}: {
+  value: number | undefined;
+  onSave: (minutes: number) => void;
+  saving: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(value ?? ""));
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setDraft(String(value ?? ""));
+          setEditing(true);
+        }}
+        className="inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+        title="AI estimate. Click to change it."
+      >
+        ⏱ Usually takes {value ? `~${value} min` : "?"} by hand <span className="underline">edit</span>
+      </button>
+    );
+  }
+  return (
+    <form
+      className="inline-flex items-center gap-1 text-xs"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const n = Math.round(Number(draft));
+        if (Number.isFinite(n) && n >= 0 && n <= 600) onSave(n);
+        setEditing(false);
+      }}
+    >
+      ⏱ Usually takes
+      <Input
+        autoFocus
+        type="number"
+        min={0}
+        max={600}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        className="h-6 w-16 px-1 text-xs"
+        aria-label="Minutes by hand"
+      />
+      min
+      <Button size="xs" type="submit" disabled={saving}>
+        Save
+      </Button>
+      <Button size="xs" type="button" variant="ghost" onClick={() => setEditing(false)}>
+        Cancel
+      </Button>
+    </form>
+  );
+}
+
 function Stat({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="rounded-lg border bg-muted/40 px-2 py-2">
@@ -180,6 +244,7 @@ function Stat({ label, value }: { label: string; value: number | string }) {
 function SkillCard({ skill, dept }: { skill: Skill; dept: Department }) {
   const [open, setOpen] = useState(false);
   const del = useActionMutation("delete-skill");
+  const save = useActionMutation("save-skill");
   return (
     <div className="rounded-lg border">
       <button className="flex w-full items-start gap-2 px-3 py-2 text-left" onClick={() => setOpen(!open)}>
@@ -187,7 +252,7 @@ function SkillCard({ skill, dept }: { skill: Skill; dept: Department }) {
         <span className="flex-1">
           <span className="block text-sm font-medium">{skill.name}</span>
           <span className="block text-xs text-muted-foreground">
-            saves ~{skill.minutesSaved} min · used {skill.timesUsed}×
+            ⏱ ~{skill.minutesSaved} min by hand · used {skill.timesUsed}×
             {skill.tools.length > 0 && ` · 🧰 ${skill.tools.join(", ")}`}
           </span>
         </span>
@@ -196,6 +261,21 @@ function SkillCard({ skill, dept }: { skill: Skill; dept: Department }) {
       {open && (
         <div className="space-y-2 border-t px-3 py-2">
           {skill.description && <p className="text-xs text-muted-foreground">{skill.description}</p>}
+          <MinutesEditor
+            value={skill.minutesSaved}
+            saving={save.isPending}
+            onSave={(minutesSaved) =>
+              save.mutate({
+                id: skill.id,
+                departmentId: skill.departmentId,
+                name: skill.name,
+                description: skill.description,
+                steps: skill.steps,
+                tools: skill.tools,
+                minutesSaved,
+              })
+            }
+          />
           <ol className="list-decimal space-y-1 pl-5 text-xs">
             {skill.steps.map((st, i) => (
               <li key={i}>
@@ -301,6 +381,7 @@ function SkillTools({ skill }: { skill: Skill }) {
 
 function TeachSkill({ dept }: { dept: Department }) {
   const [text, setText] = useState("");
+  const [minutes, setMinutes] = useState("");
   return (
     <section className="space-y-2 rounded-lg border bg-muted/30 p-3">
       <h3 className="text-sm font-semibold">Teach a skill in your own words</h3>
@@ -310,19 +391,39 @@ function TeachSkill({ dept }: { dept: Department }) {
         placeholder={`e.g. "Every Monday I pull last week's numbers and write a summary for the leads"`}
         rows={3}
       />
-      <Button
-        size="sm"
-        disabled={!text.trim()}
-        onClick={() => {
-          askAgent(
-            `Turn this into a skill for the ${dept.name} team and save it: ${text.trim()}`,
-            `Department id ${dept.id}.`,
-          );
-          setText("");
-        }}
-      >
-        ✦ Save as skill
-      </Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          Usually takes
+          <Input
+            type="number"
+            min={1}
+            max={600}
+            value={minutes}
+            onChange={(e) => setMinutes(e.target.value)}
+            placeholder="AI"
+            className="h-7 w-16 px-1.5 text-xs"
+          />
+          min by hand
+        </label>
+        <Button
+          size="sm"
+          className="ml-auto"
+          disabled={!text.trim()}
+          onClick={() => {
+            const m = Math.round(Number(minutes));
+            const time =
+              m > 0
+                ? `It usually takes a person ${m} minutes by hand (use minutesSaved=${m}).`
+                : "Estimate honestly how many minutes it usually takes a person by hand and save that as minutesSaved.";
+            askAgent(`Turn this into a skill for the ${dept.name} team and save it: ${text.trim()}\n\n${time}`, `Department id ${dept.id}.`);
+            setText("");
+            setMinutes("");
+          }}
+        >
+          ✦ Save as skill
+        </Button>
+      </div>
+      <p className="text-[11px] text-muted-foreground">Leave the minutes empty and the AI estimates them; you can change it later.</p>
     </section>
   );
 }
@@ -359,6 +460,7 @@ function StepChips({ org, steps }: { org: OrgSnapshot; steps: Workflow["steps"] 
 
 function WorkflowsTab({ org, onShowRuns }: { org: OrgSnapshot; onShowRuns: () => void }) {
   const [idea, setIdea] = useState("");
+  const [minutes, setMinutes] = useState("");
   const del = useActionMutation("delete-workflow");
   const busy = org.runs.some((r) => r.status === "running" || r.status === "waiting_approval");
   return (
@@ -371,16 +473,38 @@ function WorkflowsTab({ org, onShowRuns }: { org: OrgSnapshot; onShowRuns: () =>
           rows={3}
           placeholder={`e.g. "When marketing gets a webinar signup, sales qualifies it, and success books a demo"`}
         />
-        <Button
-          size="sm"
-          disabled={!idea.trim()}
-          onClick={() => {
-            askAgent(`Design a cross-team workflow for this and save it: ${idea.trim()}`);
-            setIdea("");
-          }}
-        >
-          ✦ Design with the agent
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            Usually takes
+            <Input
+              type="number"
+              min={1}
+              max={6000}
+              value={minutes}
+              onChange={(e) => setMinutes(e.target.value)}
+              placeholder="AI"
+              className="h-7 w-16 px-1.5 text-xs"
+            />
+            min per run
+          </label>
+          <Button
+            size="sm"
+            className="ml-auto"
+            disabled={!idea.trim()}
+            onClick={() => {
+              const m = Math.round(Number(minutes));
+              const time =
+                m > 0
+                  ? `Done by hand it usually takes about ${m} minutes in total; split that across the steps as each step's minutes.`
+                  : "Estimate honestly how many minutes each step usually takes a person by hand and save it as the step's minutes.";
+              askAgent(`Design a cross-team workflow for this and save it: ${idea.trim()}\n\n${time}`);
+              setIdea("");
+              setMinutes("");
+            }}
+          >
+            ✦ Design with the agent
+          </Button>
+        </div>
       </section>
       {org.workflows.length === 0 && <p className="text-sm text-muted-foreground">No workflows yet.</p>}
       {org.workflows.map((w) => (
@@ -392,6 +516,7 @@ function WorkflowsTab({ org, onShowRuns }: { org: OrgSnapshot; onShowRuns: () =>
             </div>
           </div>
           <StepChips org={org} steps={w.steps} />
+          <WorkflowTimes workflow={w} org={org} />
           <div className="flex gap-2 pt-1">
             <Button
               size="xs"
@@ -426,6 +551,95 @@ function WorkflowsTab({ org, onShowRuns }: { org: OrgSnapshot; onShowRuns: () =>
           </div>
         </article>
       ))}
+    </div>
+  );
+}
+
+/** Total time a run takes by hand, and the per-step AI estimates people can correct. */
+function WorkflowTimes({ workflow: w, org }: { workflow: Workflow; org: OrgSnapshot }) {
+  const save = useActionMutation("save-workflow");
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const known = w.steps.filter((s) => typeof s.minutes === "number");
+  const total = known.reduce((a, s) => a + (s.minutes ?? 0), 0);
+  const missing = w.steps.length - known.length;
+  const persist = () => {
+    save.mutate({
+      id: w.id,
+      name: w.name,
+      goal: w.goal,
+      steps: w.steps.map((s) => {
+        const raw = draft[s.id];
+        const n = raw === undefined || raw === "" ? s.minutes : Math.max(0, Math.min(600, Math.round(Number(raw))));
+        return {
+          id: s.id,
+          departmentId: s.departmentId,
+          kind: s.kind,
+          title: s.title,
+          instructions: s.instructions,
+          ...(typeof n === "number" && Number.isFinite(n) ? { minutes: n } : {}),
+        };
+      }),
+    });
+    setOpen(false);
+  };
+  return (
+    <div className="text-xs">
+      <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
+        <span>
+          ⏱ {known.length ? `~${total} min by hand per run` : "No time estimate yet"}
+          {known.length > 0 && missing > 0 && ` (${missing} step${missing > 1 ? "s" : ""} not estimated)`}
+        </span>
+        <button className="underline hover:text-foreground" onClick={() => setOpen(!open)}>
+          {open ? "close" : "edit times"}
+        </button>
+        {missing > 0 && (
+          <button
+            className="underline hover:text-foreground"
+            onClick={() =>
+              askAgent(
+                `Estimate honestly how many minutes each step of the workflow "${w.name}" usually takes a person by hand, and save them as the steps' minutes (keep everything else the same).`,
+                `workflowId=${w.id}`,
+              )
+            }
+          >
+            ✦ AI estimate
+          </button>
+        )}
+      </div>
+      {open && (
+        <form
+          className="mt-2 space-y-1.5 rounded-md border bg-muted/30 p-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            persist();
+          }}
+        >
+          {w.steps.map((s) => (
+            <label key={s.id} className="flex items-center gap-2">
+              <span className="min-w-0 flex-1 truncate" title={s.title}>
+                {deptOf(org, s.departmentId)?.emoji} {s.title}
+              </span>
+              <Input
+                type="number"
+                min={0}
+                max={600}
+                value={draft[s.id] ?? s.minutes ?? ""}
+                placeholder="?"
+                onChange={(e) => setDraft({ ...draft, [s.id]: e.target.value })}
+                className="h-6 w-16 px-1 text-xs"
+                aria-label={`Minutes for ${s.title}`}
+              />
+              min
+            </label>
+          ))}
+          <div className="flex justify-end gap-1 pt-1">
+            <Button size="xs" type="submit" disabled={save.isPending}>
+              Save times
+            </Button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

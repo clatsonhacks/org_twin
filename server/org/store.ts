@@ -176,23 +176,41 @@ export async function getSnapshot(owner: string): Promise<OrgSnapshot> {
   ]);
   const departmentList = deps.map(toDepartment);
   const runList = rns.map(toRun);
-  const minutes = runList
-    .flatMap((r) => r.steps)
-    .filter((s) => s.status === "done")
-    .reduce((a, s) => a + (s.minutesSaved || 0), 0);
+  const skillList = sks.map(toSkill);
   const requestList = reqs.map(toRequest);
-  const requestMinutes = requestList.filter((r) => r.status === "done").length * 30;
+  // Real time saved: every finished run step (all runs, not just the latest 20), plus finished requests at
+  // the time their skill usually takes by hand.
+  const [allRuns, allRequests] = await Promise.all([
+    db.select({ stepsJson: runs.stepsJson }).from(runs).where(eq(runs.ownerEmail, owner)),
+    db
+      .select({ status: requests.status, skillId: requests.skillId, departmentId: requests.departmentId })
+      .from(requests)
+      .where(eq(requests.ownerEmail, owner)),
+  ]);
+  const savedMinutesByDept: Record<string, number> = {};
+  const addSaved = (dept: string, m: number) => {
+    if (dept && m > 0) savedMinutesByDept[dept] = (savedMinutesByDept[dept] ?? 0) + m;
+  };
+  for (const r of allRuns) {
+    for (const s of parse<RunStep[]>(r.stepsJson, [])) if (s.status === "done") addSaved(s.departmentId, s.minutesSaved || 0);
+  }
+  for (const r of allRequests) {
+    if (r.status !== "done" || !r.skillId) continue;
+    const skill = skillList.find((s) => s.id === r.skillId);
+    if (skill) addSaved(r.departmentId || skill.departmentId, skill.minutesSaved);
+  }
+  const savedMinutes = Object.values(savedMinutesByDept).reduce((a, m) => a + m, 0);
   return {
     company: co[0] ? { name: co[0].name, description: co[0].description } : null,
     departments: departmentList,
-    skills: sks.map(toSkill),
+    skills: skillList,
     workflows: wfs.map(toWorkflow),
     runs: runList,
     requests: requestList,
     messages: msgs.map(toMessage),
     stats: {
-      hoursAutomatable: departmentList.reduce((a, d) => a + d.hoursAutomatable, 0),
-      hoursSaved: Math.round(((minutes + requestMinutes) / 60) * 10) / 10,
+      hoursSaved: Math.round((savedMinutes / 60) * 10) / 10,
+      savedMinutesByDept,
       runsDone: runList.filter((r) => r.status === "done").length,
       waitingApprovals: runList.filter((r) => r.status === "waiting_approval").length,
     },
@@ -369,7 +387,7 @@ export interface WorkflowInput {
   id?: string | undefined;
   name: string;
   goal?: string | undefined;
-  steps: Array<Omit<WorkflowStep, "id"> & { id?: string | undefined }>;
+  steps: Array<Omit<WorkflowStep, "id" | "minutes"> & { id?: string | undefined; minutes?: number | undefined }>;
 }
 
 export async function upsertWorkflow(owner: string, input: WorkflowInput): Promise<Workflow> {
@@ -382,6 +400,7 @@ export async function upsertWorkflow(owner: string, input: WorkflowInput): Promi
       kind: s.kind === "approval" ? "approval" : "work",
       title: s.title,
       instructions: s.instructions || "",
+      ...(typeof s.minutes === "number" ? { minutes: Math.max(0, Math.min(600, Math.round(s.minutes))) } : {}),
     });
   }
   if (input.id) {

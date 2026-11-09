@@ -6,6 +6,8 @@ export interface WorkflowStep {
   kind: StepKind;
   title: string;
   instructions: string;
+  /** How many minutes this step usually takes a person by hand (AI estimate unless someone changed it). */
+  minutes?: number;
 }
 
 export type RunStepStatus = "pending" | "active" | "waiting" | "done" | "rejected";
@@ -114,8 +116,10 @@ export interface OrgSnapshot {
   requests: TeamRequest[];
   messages: AgentMessage[];
   stats: {
-    hoursAutomatable: number;
+    /** Hours actually saved: finished run steps plus finished requests handled by a skill. */
     hoursSaved: number;
+    /** The same, in minutes, per department id. */
+    savedMinutesByDept: Record<string, number>;
     runsDone: number;
     waitingApprovals: number;
   };

@@ -59,7 +59,7 @@ export function buildGraph(org: OrgSnapshot) {
     const start = a + 0.4 * unit;
     const mid = start + (w * unit) / 2;
     teamAngle[d.id] = mid;
-    add({ id: `team:${d.id}`, kind: "team", label: `${d.emoji} ${d.name}`, sub: `${d.headcount} people · ${d.hoursAutomatable} h/wk AI`, color: d.color, a: mid, ref: d.id }, R.team);
+    add({ id: `team:${d.id}`, kind: "team", label: `${d.emoji} ${d.name}`, sub: `${d.headcount} people · ${Math.round(((org.stats.savedMinutesByDept[d.id] ?? 0) / 60) * 10) / 10} h saved`, color: d.color, a: mid, ref: d.id }, R.team);
     edges.push({ from: "org", to: `team:${d.id}`, kind: "has" });
     d.roles.forEach((r, i) => {
       const ra = start + ((i + 0.5) * w * unit) / Math.max(1, d.roles.length);
@@ -69,7 +69,7 @@ export function buildGraph(org: OrgSnapshot) {
     const skills = org.skills.filter((s) => s.departmentId === d.id);
     skills.forEach((s, i) => {
       const sa = start + ((i + 0.5) * w * unit) / Math.max(1, skills.length);
-      add({ id: `skill:${s.id}`, kind: "skill", label: s.name, sub: `saves ~${s.minutesSaved} min · used ${s.timesUsed}×`, color: SKILL, a: sa, ref: s.id }, R.skill);
+      add({ id: `skill:${s.id}`, kind: "skill", label: s.name, sub: `~${s.minutesSaved} min by hand · used ${s.timesUsed}×`, color: SKILL, a: sa, ref: s.id }, R.skill);
       edges.push({ from: `team:${d.id}`, to: `skill:${s.id}`, kind: "has" });
     });
     a = start + w * unit + 0.4 * unit;
@@ -302,7 +302,7 @@ export function KnowledgeGraph() {
               size="sm"
               variant="outline"
               className="w-full"
-              onClick={() => askAgent("Look at our knowledge graph: which teams have few skills compared to their hours AI could save, and which skills should we teach next?")}
+              onClick={() => askAgent("Look at our knowledge graph: which teams have few skills compared to their size and the work they do, and which skills should we teach next?")}
             >
               ✦ Where are our gaps?
             </Button>
