@@ -1,15 +1,17 @@
 import { useActionMutation, useActionQuery } from "@agent-native/core/client/hooks";
+import { useOrgMembers, useOrgRole } from "@agent-native/core/client/org-team";
 import { useSetPageTitle } from "@agent-native/toolkit/app-shell";
 import { AgentToggleButton } from "@agent-native/toolkit/app/chat";
 import { Textarea } from "@agent-native/toolkit/ui/textarea";
 import { useState } from "react";
-import { useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 
 import { Button } from "@/components/ui/button";
 
 import type { OrgSnapshot } from "../../../shared/types";
 import { askAgent } from "./agent";
 import { OrgPanel, type PanelTab } from "./OrgPanel";
+import { Avatar } from "./WorkspaceGate";
 import { Stage3D } from "./Stage3D";
 
 const PANELS: PanelTab[] = ["dept", "workflows", "runs", "requests", "connect"];
@@ -89,19 +91,42 @@ function Hud({ org, onTab }: { org: OrgSnapshot; onTab: (t: PanelTab) => void })
         <Chip label="approvals waiting" value={s.waitingApprovals} tone={s.waitingApprovals ? "amber" : "slate"} />
       </button>
       <AiAllowance />
-      <div className="ml-auto flex gap-2">
+      <div className="ml-auto flex items-center gap-2">
+        <People />
         <Button size="sm" variant="outline" onClick={() => onTab("requests")}>
           📥 Ask a team
         </Button>
         <Button size="sm" variant="outline" onClick={() => onTab("workflows")}>
           🔀 Workflows
         </Button>
-        <Button size="sm" variant="outline" onClick={() => onTab("connect")}>
-          🔌 Connect
-        </Button>
         <AgentToggleButton />
       </div>
     </div>
+  );
+}
+
+/** Who is in this workspace, with a shortcut to invite more people. */
+function People() {
+  const { data } = useOrgMembers(0);
+  const { canInviteMembers } = useOrgRole();
+  const members = data?.members ?? [];
+  return (
+    <Link
+      to="/team"
+      className="group flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-xs transition-colors hover:bg-accent"
+      title="Team: members and invitations"
+    >
+      <span className="flex -space-x-2">
+        {members.slice(0, 4).map((m) => (
+          <span key={m.email} className="rounded-full ring-2 ring-background">
+            <Avatar name={m.name || m.email} image={m.image ?? null} size={24} />
+          </span>
+        ))}
+      </span>
+      <span className="text-muted-foreground group-hover:text-foreground">
+        {canInviteMembers ? (members.length > 1 ? `${members.length} people · Invite` : "Invite your team") : `${members.length} people`}
+      </span>
+    </Link>
   );
 }
 

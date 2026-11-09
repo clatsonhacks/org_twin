@@ -32,6 +32,30 @@ export function requireUserEmail(email: string | undefined): string {
   return email;
 }
 
+/** Owner key for data shared by a workspace (organization). Personal data is keyed by email. */
+export function workspaceKey(orgId: string): string {
+  return `org:${orgId}`;
+}
+
+const adopted = new Set<string>();
+/**
+ * Moving to shared workspaces: the first time a workspace is opened and it is still empty, bring along the
+ * company its member built on their own before (data was per person until now). Never merges into a
+ * workspace that already has a company.
+ */
+export async function adoptPersonalData(email: string, key: string): Promise<void> {
+  if (key === email || adopted.has(`${email}>${key}`)) return;
+  const db = getDb();
+  const [hasWorkspace] = await db.select({ id: companies.id }).from(companies).where(eq(companies.ownerEmail, key));
+  const [hasPersonal] = await db.select({ id: departments.id }).from(departments).where(eq(departments.ownerEmail, email));
+  if (!hasWorkspace && hasPersonal) {
+    for (const t of [companies, departments, skills, workflows, runs, requests, messages]) {
+      await db.update(t).set({ ownerEmail: key }).where(eq(t.ownerEmail, email));
+    }
+  }
+  adopted.add(`${email}>${key}`);
+}
+
 const nowIso = () => new Date().toISOString();
 
 export function slugId(name: string, prefix: string): string {

@@ -22,11 +22,10 @@ interface OrgPanelProps {
 }
 
 const TABS: Array<{ id: PanelTab; label: string }> = [
-  { id: "dept", label: "Team" },
+  { id: "dept", label: "Department" },
   { id: "workflows", label: "Workflows" },
   { id: "runs", label: "Runs" },
   { id: "requests", label: "Requests" },
-  { id: "connect", label: "Connect" },
 ];
 
 export function OrgPanel({ org, tab, selected, onTab, onSelectDept }: OrgPanelProps) {
@@ -744,7 +743,7 @@ function A2AFeed({ org, runId }: { org: OrgSnapshot; runId?: string }) {
 
 /* ---------------- Connect ---------------- */
 
-function ConnectTab({ org }: { org: OrgSnapshot }) {
+export function ConnectTab({ org }: { org: OrgSnapshot }) {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const external = org.messages.filter((m) => m.kind === "external");
   return (

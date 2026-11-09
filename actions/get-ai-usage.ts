@@ -2,7 +2,7 @@ import { defineAction } from "@agent-native/core/action";
 import { z } from "zod";
 
 import { aiLimits, aiUsage, limitReached } from "../server/ai-limits.js";
-import { owner } from "./lib/owner.js";
+import { person } from "./lib/owner.js";
 
 export default defineAction({
   description:
@@ -11,7 +11,7 @@ export default defineAction({
   http: { method: "GET" },
   readOnly: true,
   run: async (_args, ctx) => {
-    const email = owner(ctx);
+    const email = person(ctx);
     const limits = aiLimits();
     const usage = await aiUsage(email);
     const exempt = limits.exempt.includes(email.toLowerCase());

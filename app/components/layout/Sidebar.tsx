@@ -15,11 +15,15 @@ import { openCommandMenu } from "@agent-native/toolkit/app/shared";
 import { AgentNativeIcon } from "@agent-native/toolkit/app/shared/AgentNativeIcon";
 import {
   IconEdit,
-  IconHome,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
   IconLoader2,
+  IconMap2,
+  IconPlug,
   IconSearch,
+  IconTopologyStar3,
+  IconUsers,
+  type Icon,
 } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
@@ -117,40 +121,44 @@ function persistActiveThreadId(threadId: string) {
   } catch {}
 }
 
-function HomeNavLink({ collapsed }: { collapsed: boolean }) {
-  const t = useT();
+const NAV: Array<{ to: string; label: string; icon: Icon; hint: string }> = [
+  { to: HOME_PATH, label: "Company map", icon: IconMap2, hint: "Teams, workflows, runs and requests" },
+  { to: "/graph", label: "Knowledge graph", icon: IconTopologyStar3, hint: "Who knows what across teams" },
+  { to: "/team", label: "Team", icon: IconUsers, hint: "Members, invitations and roles" },
+  { to: "/connectors", label: "Connectors", icon: IconPlug, hint: "Slack, Gmail, Stripe, MCP and more" },
+];
+
+function NavLinks({ collapsed }: { collapsed: boolean }) {
   const location = useLocation();
-  const active = location.pathname === HOME_PATH;
-  const link = (
-    <Link
-      to={HOME_PATH}
-      aria-current={active ? "page" : undefined}
-      aria-label={collapsed ? t("navigation.home") : undefined}
-      className={cn(
-        "flex items-center text-sidebar-accent-foreground transition-colors hover:bg-sidebar-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
-        active && "bg-sidebar-accent",
-        collapsed
-          ? "size-8 justify-center rounded-md"
-          : "h-8 w-full gap-3 rounded-lg px-3 text-sm font-medium",
-      )}
-    >
-      <IconHome className="size-4 shrink-0" strokeWidth={1.8} />
-      <span className={collapsed ? "sr-only" : "truncate"}>
-        {t("navigation.home")}
-      </span>
-    </Link>
+  return (
+    <div className={cn("flex flex-col gap-0.5", collapsed ? "items-center" : "px-2")}>
+      {NAV.map(({ to, label, icon: NavIcon, hint }) => {
+        const active = location.pathname === to;
+        const link = (
+          <Link
+            key={to}
+            to={to}
+            aria-current={active ? "page" : undefined}
+            aria-label={collapsed ? label : undefined}
+            className={cn(
+              "flex items-center text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+              active && "bg-sidebar-accent font-medium text-sidebar-accent-foreground",
+              collapsed ? "size-8 justify-center rounded-md" : "h-8 w-full gap-3 rounded-lg px-3 text-sm",
+            )}
+          >
+            <NavIcon className="size-4 shrink-0" strokeWidth={1.8} />
+            <span className={collapsed ? "sr-only" : "truncate"}>{label}</span>
+          </Link>
+        );
+        return (
+          <Tooltip key={to}>
+            <TooltipTrigger asChild>{link}</TooltipTrigger>
+            <TooltipContent side="right">{collapsed ? label : hint}</TooltipContent>
+          </Tooltip>
+        );
+      })}
+    </div>
   );
-
-  if (collapsed) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>{link}</TooltipTrigger>
-        <TooltipContent side="right">{t("navigation.home")}</TooltipContent>
-      </Tooltip>
-    );
-  }
-
-  return <div className="px-2">{link}</div>;
 }
 
 function ChatThreadsSection({ collapsed }: { collapsed: boolean }) {
@@ -407,7 +415,13 @@ export function Sidebar({
           collapsed ? "items-center gap-1 px-1 py-2" : "pt-1",
         )}
       >
-        <HomeNavLink collapsed={collapsed} />
+        <NavLinks collapsed={collapsed} />
+        {!collapsed && (
+          <div className="mt-4 px-5 pb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/60">
+            Chats with the agent
+          </div>
+        )}
+        {collapsed && <div className="my-1 h-px w-6 bg-sidebar-border" />}
         <ChatThreadsSection collapsed={collapsed} />
       </nav>
 

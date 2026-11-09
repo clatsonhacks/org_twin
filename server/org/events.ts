@@ -1,3 +1,4 @@
+import { getRequestUserEmail } from "@agent-native/core/server";
 import { emit, registerEvent } from "@agent-native/core/event-bus";
 import { z } from "zod";
 
@@ -28,7 +29,10 @@ export function registerOrgTwinEvents() {
 
 export function emitOrgTwin(event: string, payload: Record<string, unknown>, owner: string) {
   try {
-    emit(event, payload, { owner });
+    // Automations belong to people: for workspace data, the event goes to the person who acted.
+    const who = owner.startsWith("org:") ? getRequestUserEmail() : owner;
+    if (!who) return;
+    emit(event, payload, { owner: who });
   } catch {
     // Events are best-effort; the app never depends on them.
   }

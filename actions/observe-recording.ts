@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { enforceAiLimits, recordAiCall } from "../server/ai-limits.js";
 import { describeImages, inferenceConfigured, visionModel } from "../server/vultr.js";
-import { owner } from "./lib/owner.js";
+import { person } from "./lib/owner.js";
 
 const MAX_FRAMES = 16;
 const BATCH = 4;
@@ -40,7 +40,7 @@ export default defineAction({
   mcpTool: false,
   toolCallable: false,
   run: async ({ frames }, ctx) => {
-    const email = owner(ctx);
+    const email = person(ctx);
     if (!inferenceConfigured()) {
       return { model: null, observations: [], note: "No Vultr inference key, so the skill is learned from the narration only." };
     }

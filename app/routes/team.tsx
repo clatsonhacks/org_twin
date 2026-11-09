@@ -1,5 +1,5 @@
-import { Navigate } from "react-router";
-
+import { TeamHub } from "@/components/orgtwin/TeamHub";
+import { WorkspaceGate } from "@/components/orgtwin/WorkspaceGate";
 import { APP_TITLE } from "@/lib/app-config";
 
 export function meta() {
@@ -7,5 +7,9 @@ export function meta() {
 }
 
 export default function TeamRoute() {
-  return <Navigate to="/settings/organization" replace />;
+  return (
+    <WorkspaceGate>
+      <TeamHub />
+    </WorkspaceGate>
+  );
 }

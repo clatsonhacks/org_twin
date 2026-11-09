@@ -56,13 +56,27 @@ ${skillLines}
  */
 export async function syncTeamAgents(owner: string, removedDepartmentIds: string[] = []): Promise<number> {
   try {
-    for (const id of removedDepartmentIds) await deleteResource(teamAgentPath(id)).catch(() => {});
+    // Workspace data: the team agents are shared with everyone in the workspace (personal as a fallback).
+    const shared = owner.startsWith("org:");
+    const put = async (path: string, md: string) => {
+      if (shared) {
+        try {
+          await writeResource(path, md, { scope: "shared", mimeType: "text/markdown" });
+          return;
+        } catch {
+          // Only owners/admins may write shared resources; keep a personal copy instead.
+        }
+      }
+      await writeResource(path, md, { mimeType: "text/markdown" });
+    };
+    for (const id of removedDepartmentIds) {
+      await deleteResource(teamAgentPath(id)).catch(() => {});
+      if (shared) await deleteResource(teamAgentPath(id), { scope: "shared" }).catch(() => {});
+    }
     const snap = await getSnapshot(owner);
     const company = snap.company?.name ?? "the company";
     for (const d of snap.departments) {
-      await writeResource(teamAgentPath(d.id), profile(d, snap.skills.filter((s) => s.departmentId === d.id), company), {
-        mimeType: "text/markdown",
-      });
+      await put(teamAgentPath(d.id), profile(d, snap.skills.filter((s) => s.departmentId === d.id), company));
     }
     return snap.departments.length;
   } catch (error) {

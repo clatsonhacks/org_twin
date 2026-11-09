@@ -2,7 +2,7 @@ import { defineAction } from "@agent-native/core/action";
 import { z } from "zod";
 
 import { decideApproval } from "../server/org/store.js";
-import { owner } from "./lib/owner.js";
+import { owner, person } from "./lib/owner.js";
 
 // Human-only: hidden from the agent and from MCP/A2A, so an agent can never approve its own work.
 export default defineAction({
@@ -16,7 +16,6 @@ export default defineAction({
   mcpTool: false,
   toolCallable: false,
   run: async ({ runId, approve, note }, ctx) => {
-    const me = owner(ctx);
-    return decideApproval(me, runId, approve, note, me);
+    return decideApproval(owner(ctx), runId, approve, note, person(ctx));
   },
 });

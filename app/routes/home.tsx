@@ -1,4 +1,5 @@
 import OrgTwinPage from "@/components/orgtwin/OrgTwinPage";
+import { WorkspaceGate } from "@/components/orgtwin/WorkspaceGate";
 
 const SEO_TITLE = "OrgTwin — your company as a living map, run by people and agents";
 const SEO_DESCRIPTION =
@@ -14,5 +15,9 @@ export function meta() {
 }
 
 export default function HomeRoute() {
-  return <OrgTwinPage />;
+  return (
+    <WorkspaceGate>
+      <OrgTwinPage />
+    </WorkspaceGate>
+  );
 }
