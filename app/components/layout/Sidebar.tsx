@@ -18,7 +18,7 @@ import {
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
   IconLoader2,
-  IconMap2,
+  IconHome,
   IconPlug,
   IconSearch,
   IconTopologyStar3,
@@ -122,7 +122,7 @@ function persistActiveThreadId(threadId: string) {
 }
 
 const NAV: Array<{ to: string; label: string; icon: Icon; hint: string }> = [
-  { to: HOME_PATH, label: "Company map", icon: IconMap2, hint: "Teams, workflows, runs and requests" },
+  { to: HOME_PATH, label: "Home", icon: IconHome, hint: "Teams, workflows, runs and requests" },
   { to: "/graph", label: "Knowledge graph", icon: IconTopologyStar3, hint: "Who knows what across teams" },
   { to: "/team", label: "Team", icon: IconUsers, hint: "Members, invitations and roles" },
   { to: "/connectors", label: "Connectors", icon: IconPlug, hint: "Slack, Gmail, Stripe, MCP and more" },

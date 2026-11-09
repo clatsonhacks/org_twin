@@ -40,7 +40,7 @@ Built with [Agent-Native](https://agent-native.com) for the Builder.io Agent-Nat
 
 After signing in, people join their company's **workspace** (an invitation from an admin, or their email domain)
 or create a new one. Everyone in a workspace shares one company map, skills, workflows, runs and approvals.
-The sidebar has the **Company map**, **Knowledge graph** (teams → roles and skills → tools, workflows across
+The sidebar has **Home** (the company map), **Knowledge graph** (teams → roles and skills → tools, workflows across
 teams), **Team** (members, invitations, roles, join-by-domain) and **Connectors**. Set `AUTO_CREATE_DEFAULT_ORG=0`
 in production so new people choose a workspace instead of getting a personal one.
 
