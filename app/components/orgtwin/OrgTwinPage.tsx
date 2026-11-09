@@ -88,6 +88,7 @@ function Hud({ org, onTab }: { org: OrgSnapshot; onTab: (t: PanelTab) => void })
       <button onClick={() => onTab("runs")} className="contents">
         <Chip label="approvals waiting" value={s.waitingApprovals} tone={s.waitingApprovals ? "amber" : "slate"} />
       </button>
+      <AiAllowance />
       <div className="ml-auto flex gap-2">
         <Button size="sm" variant="outline" onClick={() => onTab("requests")}>
           📥 Ask a team
@@ -101,6 +102,22 @@ function Hud({ org, onTab }: { org: OrgSnapshot; onTab: (t: PanelTab) => void })
         <AgentToggleButton />
       </div>
     </div>
+  );
+}
+
+/** Today's AI allowance for this person (limits protect the shared AI key; they reset at midnight UTC). */
+function AiAllowance() {
+  const { data } = useActionQuery<{
+    turnsToday: number;
+    limits: { dailyTurns: number };
+    blocked: string | null;
+  }>("get-ai-usage", {}, { refetchInterval: 60_000 });
+  if (!data || !data.limits.dailyTurns) return null;
+  const left = Math.max(0, data.limits.dailyTurns - data.turnsToday);
+  return (
+    <span title={data.blocked ?? "AI requests left today (resets at midnight UTC)"}>
+      <Chip label="AI requests left today" value={left} tone={data.blocked || left <= 5 ? "amber" : "slate"} />
+    </span>
   );
 }
 

@@ -1,6 +1,7 @@
 import { defineAction } from "@agent-native/core/action";
 import { z } from "zod";
 
+import { enforceAiLimits, recordAiCall } from "../server/ai-limits.js";
 import { describeImages, inferenceConfigured, visionModel } from "../server/vultr.js";
 import { owner } from "./lib/owner.js";
 
@@ -39,7 +40,7 @@ export default defineAction({
   mcpTool: false,
   toolCallable: false,
   run: async ({ frames }, ctx) => {
-    owner(ctx);
+    const email = owner(ctx);
     if (!inferenceConfigured()) {
       return { model: null, observations: [], note: "No Vultr inference key, so the skill is learned from the narration only." };
     }
@@ -47,12 +48,14 @@ export default defineAction({
     if (!model) {
       return { model: null, observations: [], note: "No vision model on this Vultr subscription (set VULTR_VISION_MODEL); learning from the narration only." };
     }
+    await enforceAiLimits(email);
     const picked = sample(frames, MAX_FRAMES);
     const observations: string[] = [];
     for (let i = 0; i < picked.length; i += BATCH) {
       const batch = picked.slice(i, i + BATCH);
       const res = await describeImages(PROMPT(i + 1, i + batch.length), batch);
       if (!res) break;
+      await recordAiCall(email, res.model, res.usage, "skill-recorder");
       observations.push(
         ...res.text
           .split("\n")

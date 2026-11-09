@@ -61,6 +61,9 @@ export async function describeImages(prompt: string, images: string[], maxTokens
     signal: AbortSignal.timeout(180_000),
   });
   if (!res.ok) throw new Error(`Vultr vision model returned HTTP ${res.status}.`);
-  const json = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-  return { model, text: json.choices?.[0]?.message?.content ?? "" };
+  const json = (await res.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+    usage?: { prompt_tokens?: number; completion_tokens?: number };
+  };
+  return { model, text: json.choices?.[0]?.message?.content ?? "", usage: json.usage };
 }

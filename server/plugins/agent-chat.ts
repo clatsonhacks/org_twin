@@ -5,6 +5,7 @@ import {
 } from "@agent-native/core/server";
 
 import actionsRegistry from "../../.generated/actions-registry.js";
+import { enforceAiLimits } from "../ai-limits.js";
 import {
   searchConversationReferences,
   validateConversationReferences,
@@ -33,7 +34,9 @@ export default createAgentChatPlugin({
       search: searchConversationReferences,
     },
   },
-  prepareRequest: async ({ references }) => {
+  prepareRequest: async ({ references, ownerEmail, internalContinuation, isBackgroundWorker }) => {
+    // Daily / per-minute limits on the AI key. A turn that was already allowed may continue.
+    if (!internalContinuation && !isBackgroundWorker) await enforceAiLimits(ownerEmail);
     await validateConversationReferences(references);
   },
   actions: loadActionsFromStaticRegistry(actionsRegistry),
